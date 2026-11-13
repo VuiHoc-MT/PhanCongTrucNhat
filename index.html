@@ -176,10 +176,10 @@
       if (val) {
         appData.students = val.students || [];
         appData.schedule = val.schedule || {};
-      }
-      if (val.weekHeaders && val.weekHeaders.length === 6) {
-        weekHeaders = val.weekHeaders;
-        appData.weekHeaders = val.weekHeaders;
+        if (val.weekHeaders && val.weekHeaders.length === 6) {
+          weekHeaders = val.weekHeaders;
+          appData.weekHeaders = val.weekHeaders;
+        }
       }
       const statusEl = document.getElementById("syncStatus");
       statusEl.textContent = "● Đã đồng bộ trực tuyến";
@@ -217,7 +217,7 @@
         isAdmin = true;
         document.getElementById("adminSidebar").classList.remove("hidden");
         document.getElementById("adminToolbar").classList.remove("hidden");
-        document.getElementById("logoutBth").classList.remove("hidden");
+        document.getElementById("logoutBtn").classList.remove("hidden");
         document.getElementById("loginBtn").classList.add("hidden");
         document.getElementById("roleBadge").textContent = "Tài khoản: " + user.email;
         document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700";
