@@ -213,26 +213,40 @@
     };
 
     onAuthStateChanged(auth, (user) => {
-      if (user) {
-        isAdmin = true;
-        document.getElementById("adminSidebar").classList.remove("hidden");
-        document.getElementById("adminToolbar").classList.remove("hidden");
-        document.getElementById("logoutBtn").classList.remove("hidden");
-        document.getElementById("loginBtn").classList.add("hidden");
-        document.getElementById("roleBadge").textContent = "Tài khoản: " + user.email;
-        document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700";
-        document.getElementById("studentInput").value = appData.students.join("\n");
-      } else {
-        isAdmin = false;
-        document.getElementById("adminSidebar").classList.add("hidden");
-        document.getElementById("adminToolbar").classList.add("hidden");
-        document.getElementById("logoutBtn").classList.add("hidden");
-        document.getElementById("loginBtn").classList.remove("hidden");
-        document.getElementById("roleBadge").textContent = "Chế độ: Khách (Chỉ xem)";
-        document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700";
-      }
+    if (user) {
+      // Thử ghi vào nhánh adminCheck để hỏi máy chủ Firebase xem người này có phải Admin không
+      const checkRef = ref(db, "adminCheck/" + user.uid);
+      set(checkRef, Date.now())
+        .then(() => {
+          // Thành công -> Đúng là Admin! Mở giao diện toàn quyền
+          isAdmin = true;
+          document.getElementById("adminSidebar").classList.remove("hidden");
+          document.getElementById("adminToolbar").classList.remove("hidden");
+          document.getElementById("logoutBtn").classList.remove("hidden");
+          document.getElementById("loginBtn").classList.add("hidden");
+          document.getElementById("roleBadge").textContent = "Admin: " + user.email;
+          document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700";
+          document.getElementById("studentInput").value = appData.students.join("\n");
+          renderAll();
+        })
+        .catch(() => {
+          // Bị từ chối -> Không phải Admin! Tự động đăng xuất hoặc giữ chế độ Khách
+          isAdmin = false;
+          alert("Tài khoản " + user.email + " không có quyền Admin! Bạn chỉ có thể xem lịch.");
+          signOut(auth);
+        });
+    } else {
+      // Chưa đăng nhập -> Chế độ Khách
+      isAdmin = false;
+      document.getElementById("adminSidebar").classList.add("hidden");
+      document.getElementById("adminToolbar").classList.add("hidden");
+      document.getElementById("logoutBtn").classList.add("hidden");
+      document.getElementById("loginBtn").classList.remove("hidden");
+      document.getElementById("roleBadge").textContent = "Chế độ: Khách (Chỉ xem)";
+      document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700";
       renderAll();
-    })
+    }
+  });
 
     window.updateStudentList = () => {
       if (!isAdmin) return;
