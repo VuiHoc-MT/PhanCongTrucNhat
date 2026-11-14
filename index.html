@@ -28,7 +28,7 @@
   </style>
 </head>
 <body class="bg-aurora text-slate-800 min-h-screen font-sans">
-  <div class="fixed top-[-10%] left-[-5%] w-96 h-96 bg-purple-300/400 rounded-full blur-3xl -z-10 pointer-events-none"></div>
+  <div class="fixed top-[-10%] left-[-5%] w-96 h-96 bg-purple-300/40 rounded-full blur-3xl -z-10 pointer-events-none"></div>
   <div class="fixed bottom-[-10%] right-[-5%] w-96 h-96 bg-blue-300/40 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
   <!-- Thanh tiêu đề & Đăng nhập Admin -->
@@ -99,18 +99,35 @@
         </thead>
         <tbody id="scheduleBody" class="text-sm"></tbody>
       </table>
+      <!-- KHUNG BÁO BÀI / GHI CHÚ LỚP -->
+      <div class="mt-6 pt-5 border-t border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2 text-base">
+            <span>📌</span> Báo bài & Ghi chú của lớp
+          </h3>
+          <button id="saveNoticeBtn" onclick="saveClassNotice()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow transition">
+            💾 Lưu báo bài
+          </button>
+        </div>
+
+        <!-- Khung hiển thị dành cho Khách (Học sinh xem) -->
+        <div id="noticeDisplay" class="bg-amber-50/80 border border-amber-200 rounded-xl p-4 text-sm text-slate-700 whitespace-pre-line min-h-[200px]">
+          Chưa có thông tin báo bài mới.
+        </div>
+
+        <!-- Ô nhập liệu dành cho Admin (Ẩn với khách) -->
+        <textarea id="noticeInput" rows="4" placeholder="Nhập nội dung báo bài, dặn dò kiểm tra hoặc thông báo lớp tại đây..." 
+                  class="hidden w-full border border-indigo-300 bg-white rounded-xl p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+      </div>
     </section>
   </main>
 
-  <!-- KẾT NỐI FIREBASE REALTIME DATABASE -->
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, set, update, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    // =========================================================================
-    // DÁN API KEY CỦA BẠN VÀO DÒNG ĐẦU TIÊN BÊN DƯỚI (GIỮ NGUYÊN DẤU NGOẶC KÉP)
-    // =========================================================================
     const firebaseConfig = {
       apiKey: "AIzaSyDeO2BkAXLVRUG5tW2uOX1aQ3VIPSAmobE",
       authDomain: "web-lop-35a2d.firebaseapp.com",
@@ -134,20 +151,21 @@
     function createNewWeekHeaders() {
       let curr = new Date();
       let first = curr.getDate() - curr.getDay() + 1;
-
       if (curr.getDay() === 0) first = curr.getDate() - 6;
       let monday = new Date(curr.setDate(first));
       let header = [];
-
-      for (let i = 0; i < 6; i++){
+        
+      for (let i = 0; i < 6; i++) {
         let start = new Date(monday);
         start.setDate(monday.getDate() + i * 7);
         let end = new Date(start);
         end.setDate(start.getDate() + 4);
-
-        let startStr = `${start.getDate()}/${start.getMonth() + 1}`;
-        let endStr = `${end.getDate()}/${end.getMonth() + 1}`;
-        header.push(`${startStr} - ${endStr}`);
+      
+        if (start.getFullYear() !== end.getFullYear()) {
+          header.push(`${start.getDate()}/${start.getMonth() + 1}/${start.getFullYear()} - ${end.getDate()}/${end.getMonth() + 1}/${end.getFullYear()}`);
+        } else {
+          header.push(`${start.getDate()}/${start.getMonth() + 1} - ${end.getDate()}/${end.getMonth() + 1}`);
+        }
       }
       return header;
     }
@@ -162,20 +180,20 @@
 
     let isAdmin = false;
     let appData = {
-      students: ["An", "Bình", "Châu", "Dũng", "Em", "Giang", "Hà", "Hùng", "Khánh", "Lan"],
+      students: [],
       schedule: {},
-      weekHeaders: weekHeaders
+      weekHeaders: weekHeaders,
+      notice: "Chưa có thông tin báo bài mới."
     };
 
-    // Vẽ giao diện ngay lập tức khi tải trang
     renderAll();
 
-    // Lắng nghe dữ liệu từ Firebase
     onValue(dataRef, (snapshot) => {
       const val = snapshot.val();
       if (val) {
         appData.students = val.students || [];
         appData.schedule = val.schedule || {};
+        appData.notice = val.notice || "Chưa có thông tin báo bài mới.";
         if (val.weekHeaders && val.weekHeaders.length === 6) {
           weekHeaders = val.weekHeaders;
           appData.weekHeaders = val.weekHeaders;
@@ -191,15 +209,24 @@
       statusEl.className = "text-xs text-rose-600 font-medium";
     });
 
+    function saveCellToCloud(cellKey) {
+      if (!isAdmin) return;
+      const statusEl = document.getElementById("syncStatus");
+      statusEl.textContent = "● Đang lưu...";
+      const arr = appData.schedule[cellKey];
+      set(ref(db, `trucNhatLop/schedule/${cellKey}`),
+          arr && arr.length ? arr : null)
+        .then(() => statusEl.textContent = "● Đã đồng bộ trực tuyến")
+        .catch(() => alert("Không có quyền ghi hoặc dữ liệu không hợp lệ!"));
+    }
+
     function saveToCloud() {
       if (!isAdmin) return;
       const statusEl = document.getElementById("syncStatus");
       statusEl.textContent = "● Đang lưu...";
-      set(dataRef, appData).then(() => {
-        statusEl.textContent = "● Đã đồng bộ trực tuyến";
-      }).catch((err) => {
-        alert("Không thể lưu dữ liệu! Hãy kiểm tra lại tab Rules trên Firebase (.read và .write phải là true).");
-      });
+      set(dataRef, appData)
+        .then(() => statusEl.textContent = "● Đã đồng bộ trực tuyến")
+        .catch(() => alert("Không có quyền ghi hoặc dữ liệu không hợp lệ!"));
     }
 
     window.loginWithGoogle = () => {
@@ -212,41 +239,70 @@
       signOut(auth);
     };
 
-    onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // Thử ghi vào nhánh adminCheck để hỏi máy chủ Firebase xem người này có phải Admin không
-      const checkRef = ref(db, "adminCheck/" + user.uid);
-      set(checkRef, Date.now())
-        .then(() => {
-          // Thành công -> Đúng là Admin! Mở giao diện toàn quyền
-          isAdmin = true;
-          document.getElementById("adminSidebar").classList.remove("hidden");
-          document.getElementById("adminToolbar").classList.remove("hidden");
-          document.getElementById("logoutBtn").classList.remove("hidden");
-          document.getElementById("loginBtn").classList.add("hidden");
-          document.getElementById("roleBadge").textContent = "Admin: " + user.email;
-          document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700";
-          document.getElementById("studentInput").value = appData.students.join("\n");
-          renderAll();
-        })
-        .catch(() => {
-          // Bị từ chối -> Không phải Admin! Tự động đăng xuất hoặc giữ chế độ Khách
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          // Kiểm tra song song 2 nguồn quyền:
+          // 1. Nhánh admins/<uid> (Admin thêm qua Database)
+          // 2. Nhánh coreAdmins/<uid> (5 Admin nòng cốt trong Rules - đọc được mà không báo lỗi là hợp lệ)
+          const [dbAdminRes, coreAdminRes] = await Promise.allSettled([
+            get(ref(db, "admins/" + user.uid)),
+            get(ref(db, "coreAdmins/" + user.uid))
+          ]);
+          
+          const isDbAdmin = dbAdminRes.status === "fulfilled" && dbAdminRes.value.exists() && dbAdminRes.value.val() === true;
+          const isCoreAdmin = coreAdminRes.status === "fulfilled";
+          
+          if (isDbAdmin || isCoreAdmin) {
+            isAdmin = true;
+            document.getElementById("adminSidebar").classList.remove("hidden");
+            document.getElementById("adminToolbar").classList.remove("hidden");
+            document.getElementById("logoutBtn").classList.remove("hidden");
+            document.getElementById("loginBtn").classList.add("hidden");
+            document.getElementById("roleBadge").textContent = "Admin: " + user.email;
+            document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700";
+            document.getElementById("studentInput").value = appData.students.join("\n");
+          
+            const saveNoticeBtn = document.getElementById("saveNoticeBtn");
+            const noticeInput = document.getElementById("noticeInput");
+            const noticeDisplay = document.getElementById("noticeDisplay");
+            if (saveNoticeBtn && noticeInput && noticeDisplay) {
+              saveNoticeBtn.classList.remove("hidden");
+              noticeInput.classList.remove("hidden");
+              noticeDisplay.classList.add("hidden");
+              noticeInput.value = appData.notice || "";
+            }
+            renderAll();
+          } else {
+            isAdmin = false;
+            alert("Tài khoản " + user.email + " không có quyền Admin! Bạn chỉ có thể xem lịch.");
+            signOut(auth);
+          }
+        } catch (error) {
           isAdmin = false;
-          alert("Tài khoản " + user.email + " không có quyền Admin! Bạn chỉ có thể xem lịch.");
+          alert("Lỗi kết nối khi kiểm tra quyền Admin!");
           signOut(auth);
-        });
-    } else {
-      // Chưa đăng nhập -> Chế độ Khách
-      isAdmin = false;
-      document.getElementById("adminSidebar").classList.add("hidden");
-      document.getElementById("adminToolbar").classList.add("hidden");
-      document.getElementById("logoutBtn").classList.add("hidden");
-      document.getElementById("loginBtn").classList.remove("hidden");
-      document.getElementById("roleBadge").textContent = "Chế độ: Khách (Chỉ xem)";
-      document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700";
-      renderAll();
-    }
-  });
+        }
+      } else {
+        isAdmin = false;
+        document.getElementById("adminSidebar").classList.add("hidden");
+        document.getElementById("adminToolbar").classList.add("hidden");
+        document.getElementById("logoutBtn").classList.add("hidden");
+        document.getElementById("loginBtn").classList.remove("hidden");
+        document.getElementById("roleBadge").textContent = "Chế độ: Khách (Chỉ xem)";
+        document.getElementById("roleBadge").className = "px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700";
+      
+        const saveNoticeBtn = document.getElementById("saveNoticeBtn");
+        const noticeInput = document.getElementById("noticeInput");
+        const noticeDisplay = document.getElementById("noticeDisplay");
+        if (saveNoticeBtn && noticeInput && noticeDisplay) {
+          saveNoticeBtn.classList.add("hidden");
+          noticeInput.classList.add("hidden");
+          noticeDisplay.classList.remove("hidden");
+        }
+        renderAll();
+      }
+    });
 
     window.updateStudentList = () => {
       if (!isAdmin) return;
@@ -258,10 +314,15 @@
 
     window.autoAssignRandom = () => {
       if (!isAdmin || appData.students.length === 0) return;
-      const shuffled = [...appData.students].sort(() => Math.random() - 0.5);
+      const shuffled = [...appData.students];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+    
       const newSchedule = {};
       let idx = 0;
-
+    
       TASKS.forEach((_, rIdx) => {
         DAYS.forEach((day) => {
           const key = `${rIdx}_${day}`;
@@ -269,7 +330,7 @@
           idx++;
         });
       });
-
+    
       appData.schedule = newSchedule;
       renderAll();
       saveToCloud();
@@ -278,6 +339,14 @@
     window.clearSchedule = () => {
       if (!isAdmin) return;
       appData.schedule = {};
+      renderAll();
+      saveToCloud();
+    };
+
+    window.saveClassNotice = () => {
+      if (!isAdmin) return;
+      const content = document.getElementById("noticeInput").value.trim();
+      appData.notice = content || "Chưa có thông tin báo bài mới.";
       renderAll();
       saveToCloud();
     };
@@ -295,10 +364,10 @@
     }
 
     window.removeStudentFromCell = (cellKey, studentIndex) => {
-      if (!isAdmin) return;
+      if (!isAdmin || !appData.schedule[cellKey]) return;
       appData.schedule[cellKey].splice(studentIndex, 1);
       renderAll();
-      saveToCloud();
+      saveCellToCloud(cellKey);
     };
 
     function renderAll() {
@@ -353,15 +422,25 @@
             td.ondrop = (e) => {
               e.preventDefault();
               td.classList.remove("drag-over");
-              const payload = JSON.parse(e.dataTransfer.getData("text/plain"));
-              
-              if (payload.fromCell !== null) {
+
+              let payload;
+              try {
+                payload = JSON.parse(e.dataTransfer.getData("text/plain"));
+              } catch (err) {
+                return;
+              }
+            
+              if (!payload || !payload.name) return;
+            
+              if (payload.fromCell !== null && appData.schedule[payload.fromCell]) {
                 appData.schedule[payload.fromCell].splice(payload.fromIdx, 1);
+                saveCellToCloud(payload.fromCell);
               }
               if (!appData.schedule[cellKey]) appData.schedule[cellKey] = [];
               appData.schedule[cellKey].push(payload.name);
+
               renderAll();
-              saveToCloud();
+              saveCellToCloud(cellKey);
             };
           }
 
@@ -396,6 +475,11 @@
 
         tbody.appendChild(tr);
       });
+
+      const noticeDisplay = document.getElementById("noticeDisplay");
+      if (noticeDisplay) {
+        noticeDisplay.textContent = appData.notice || "Chưa có thông tin báo bài mới.";
+      }
     }
   </script>
 </body>
