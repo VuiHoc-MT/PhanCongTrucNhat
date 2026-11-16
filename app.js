@@ -237,6 +237,69 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Lọc HTML báo bài để chống XSS (giữ lại định dạng cơ bản)
+function sanitizeNoticeHtml(html) {
+  const allowedTags = new Set([
+    "B", "STRONG", "I", "EM", "U", "S", "STRIKE", "H1", "H2", "H3", "H4",
+    "P", "DIV", "BR", "UL", "OL", "LI", "BLOCKQUOTE", "SPAN", "FONT", "A",
+    "CODE", "PRE", "HR"
+  ]);
+  const dropTags = new Set(["SCRIPT", "IFRAME", "STYLE", "OBJECT", "EMBED", "LINK", "META"]);
+  const allowedAttrs = new Set(["style", "href", "target", "rel", "color", "face", "size"]);
+
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+
+  const clean = (parent) => {
+    Array.from(parent.childNodes).forEach((node) => {
+      if (node.nodeType === Node.COMMENT_NODE) {
+        node.remove();
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+      if (dropTags.has(node.tagName)) {
+        node.remove();
+        return;
+      }
+
+      if (!allowedTags.has(node.tagName)) {
+        // Gỡ thẻ nhưng giữ nội dung bên trong
+        const frag = document.createDocumentFragment();
+        while (node.firstChild) frag.appendChild(node.firstChild);
+        node.replaceWith(frag);
+        return;
+      }
+
+      Array.from(node.attributes).forEach((attr) => {
+        const name = attr.name.toLowerCase();
+        if (name.startsWith("on") || !allowedAttrs.has(name)) {
+          node.removeAttribute(attr.name);
+          return;
+        }
+        if (name === "style" && /url\s*\(|expression|javascript:/i.test(attr.value)) {
+          node.removeAttribute(attr.name);
+        }
+      });
+
+      if (node.tagName === "A") {
+        const href = node.getAttribute("href") || "";
+        if (!/^(https?:|mailto:)/i.test(href)) {
+          node.removeAttribute("href");
+        } else {
+          node.setAttribute("target", "_blank");
+          node.setAttribute("rel", "noopener noreferrer");
+        }
+      }
+
+      clean(node);
+    });
+  };
+
+  clean(tpl.content);
+  return tpl.innerHTML;
+}
+
 function saveClassToFirebase(classId, data) {
   if (!isAdmin) return;
   const statusEl = document.getElementById("syncStatus");
@@ -308,6 +371,32 @@ window.loginWithGoogle = () => {
 
 window.logoutAdmin = () => {
   signOut(auth);
+};
+
+// Email chủ web để nhận yêu cầu ủy quyền (Tạm thời chưa cấu hình)
+const ADMIN_EMAIL = "";
+
+window.submitAdminRequest = () => {
+  const input = document.getElementById("requestEmail");
+  if (!input) return;
+  const email = input.value.trim();
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRe.test(email)) {
+    alert("Vui lòng nhập email hợp lệ.");
+    input.focus();
+    return;
+  }
+  if (ADMIN_EMAIL) {
+    const subject = encodeURIComponent("Yêu cầu ủy quyền Admin - " + email);
+    const body = encodeURIComponent(
+      "Tôi là " + email + " xin được cấp quyền admin cho ứng dụng Phân công trực nhật lớp."
+    );
+    window.location.href = `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+  } else {
+    alert(
+      "Chức năng gửi email đang được hoàn thiện. Vui lòng liên hệ chủ web (PMT) qua GitHub:\nhttps://github.com/VuiHoc-MT/phancongtrucnhat/"
+    );
+  }
 };
 
 onAuthStateChanged(auth, async (user) => {
@@ -719,7 +808,8 @@ window.clearSchedule = () => {
 
 window.saveClassNotice = () => {
   if (!isAdmin || !currentClassId) return;
-  const content = document.getElementById("noticeInput").value.trim();
+  const noticeInput = document.getElementById("noticeInput");
+  const content = sanitizeNoticeHtml(noticeInput.innerHTML.trim());
   currentClassData.notice = content || "Chưa có thông tin báo bài mới.";
   classesData[currentClassId].notice = currentClassData.notice;
   renderAll();
@@ -861,11 +951,33 @@ function renderSchedule() {
 function renderNotice() {
   const noticeDisplay = document.getElementById("noticeDisplay");
   const noticeInput = document.getElementById("noticeInput");
+  const noticeToolbar = document.getElementById("noticeToolbar");
+  
   if (noticeDisplay) {
-    noticeDisplay.textContent = currentClassData.notice || "Chưa có thông tin báo bài mới.";
+    if (currentClassData.notice && currentClassData.notice !== "Chưa có thông tin báo bài mới.") {
+      noticeDisplay.innerHTML = sanitizeNoticeHtml(currentClassData.notice);
+    } else {
+      noticeDisplay.textContent = "Chưa có thông tin báo bài mới.";
+    }
   }
+  
   if (noticeInput && isAdmin) {
-    noticeInput.value = currentClassData.notice || "";
+    if (currentClassData.notice && currentClassData.notice !== "Chưa có thông tin báo bài mới.") {
+      noticeInput.innerHTML = sanitizeNoticeHtml(currentClassData.notice);
+    } else {
+      noticeInput.innerHTML = "";
+    }
+    noticeInput.classList.remove("hidden");
+    if (noticeToolbar) noticeToolbar.classList.remove("hidden");
+  } else if (noticeInput) {
+    noticeInput.classList.add("hidden");
+    if (noticeToolbar) noticeToolbar.classList.add("hidden");
+  }
+  
+  if (noticeDisplay && isAdmin) {
+    noticeDisplay.classList.add("hidden");
+  } else if (noticeDisplay) {
+    noticeDisplay.classList.remove("hidden");
   }
 }
 
@@ -976,6 +1088,166 @@ document.addEventListener('DOMContentLoaded', () => {
       closeDropdown();
     }
   });
+});
+
+// ===========================================
+// RICH TEXT EDITOR TOOLBAR
+// ===========================================
+function initNoticeToolbar() {
+  const toolbar = document.getElementById('noticeToolbar');
+  const editor = document.getElementById('noticeInput');
+  const fontFamilySelect = document.getElementById('fontFamilySelect');
+  const fontSizeSelect = document.getElementById('fontSizeSelect');
+  const textColorSelect = document.getElementById('textColorSelect');
+  
+  if (!toolbar || !editor) return;
+  
+  // Format buttons
+  toolbar.querySelectorAll('.toolbar-btn[data-format]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const format = btn.dataset.format;
+      const value = btn.dataset.value || null;
+      
+      if (format === 'heading') {
+        document.execCommand('formatBlock', false, value);
+      } else if (format === 'removeFormat') {
+        document.execCommand('removeFormat', false, null);
+        // Also clear inline styles
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const fragment = range.cloneContents();
+          const div = document.createElement('div');
+          div.appendChild(fragment);
+          const text = div.textContent;
+          range.deleteContents();
+          range.insertNode(document.createTextNode(text));
+        }
+      } else {
+        document.execCommand(format, false, value);
+      }
+      
+      // Update active state
+      btn.classList.toggle('active', document.queryCommandState(format));
+      
+      editor.focus();
+    });
+  });
+  
+  // Font family select
+  if (fontFamilySelect) {
+    fontFamilySelect.addEventListener('change', () => {
+      const value = fontFamilySelect.value;
+      if (value) {
+        document.execCommand('fontName', false, value);
+      }
+      fontFamilySelect.value = '';
+      editor.focus();
+    });
+  }
+  
+  // Font size select
+  if (fontSizeSelect) {
+    fontSizeSelect.addEventListener('change', () => {
+      const value = fontSizeSelect.value;
+      if (value) {
+        // Wrap selection in span with font-size
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const span = document.createElement('span');
+          span.style.fontSize = value;
+          range.surroundContents(span);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+      fontSizeSelect.value = '';
+      editor.focus();
+    });
+  }
+  
+  // Text color select
+  if (textColorSelect) {
+    textColorSelect.addEventListener('change', () => {
+      const value = textColorSelect.value;
+      if (value) {
+        document.execCommand('foreColor', false, value);
+      }
+      textColorSelect.value = '';
+      editor.focus();
+    });
+  }
+  
+  // Keyboard shortcuts
+  editor.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          e.preventDefault();
+          document.execCommand('bold', false, null);
+          break;
+        case 'i':
+          e.preventDefault();
+          document.execCommand('italic', false, null);
+          break;
+        case 'u':
+          e.preventDefault();
+          document.execCommand('underline', false, null);
+          break;
+      }
+    }
+  });
+  
+  // Update button states on selection change
+  editor.addEventListener('input', () => {
+    updateToolbarState();
+  });
+  
+  editor.addEventListener('keyup', () => {
+    updateToolbarState();
+  });
+  
+  editor.addEventListener('click', () => {
+    updateToolbarState();
+  });
+  
+  function updateToolbarState() {
+    toolbar.querySelectorAll('.toolbar-btn[data-format]').forEach(btn => {
+      const format = btn.dataset.format;
+      if (format === 'heading' || format === 'removeFormat') return;
+      btn.classList.toggle('active', document.queryCommandState(format));
+    });
+  }
+  
+  // Placeholder handling
+  const placeholder = editor.dataset.placeholder;
+  if (placeholder) {
+    editor.addEventListener('focus', () => {
+      if (editor.textContent === placeholder) {
+        editor.textContent = '';
+        editor.classList.remove('placeholder');
+      }
+    });
+    
+    editor.addEventListener('blur', () => {
+      if (!editor.textContent.trim()) {
+        editor.textContent = placeholder;
+        editor.classList.add('placeholder');
+      }
+    });
+    
+    if (!editor.textContent.trim()) {
+      editor.textContent = placeholder;
+      editor.classList.add('placeholder');
+    }
+  }
+}
+
+// Initialize toolbar on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+  initNoticeToolbar();
 });
 
 // ===========================================
@@ -1125,12 +1397,16 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (window.location.hash === '#about') {
     switchTab('about');
+  } else if (window.location.hash === '#request') {
+    switchTab('request');
   }
 });
 
 window.addEventListener('hashchange', () => {
   if (window.location.hash === '#about') {
     switchTab('about');
+  } else if (window.location.hash === '#request') {
+    switchTab('request');
   } else if (window.location.hash === '#home' || window.location.hash === '') {
     switchTab('home');
   }

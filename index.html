@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#4f46e5" />
+  <meta name="theme-color" content="#0284c7" />
   <meta name="description" content="Bảng phân công trực nhật lớp học - Quản lý lịch trực nhật 6 tuần, báo bài & ghi chú, đồng bộ realtime qua Firebase" />
   <title>Bảng Phân Công Trực Nhật Lớp</title>
 
@@ -68,7 +68,23 @@
     })();
   </script>
 </head>
-<body class="bg-aurora text-slate-800 min-h-screen font-sans">
+<body class="bg-ocean text-slate-800 min-h-screen font-sans">
+  <!-- Hiệu ứng sóng biển nhiều lớp, cuộn liên tục -->
+  <div class="ocean-waves" aria-hidden="true">
+    <div class="wave wave--1">
+      <svg viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0,160 C120,65 240,65 360,160 C480,255 600,255 720,160 C840,65 960,65 1080,160 C1200,255 1320,255 1440,160 C1560,65 1680,65 1800,160 C1920,255 2040,255 2160,160 C2280,65 2400,65 2520,160 C2640,255 2760,255 2880,160 L2880,320 L0,320 Z"/></svg>
+    </div>
+    <div class="wave wave--2">
+      <svg viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0,160 C120,90 240,90 360,160 C480,230 600,230 720,160 C840,90 960,90 1080,160 C1200,230 1320,230 1440,160 C1560,90 1680,90 1800,160 C1920,230 2040,230 2160,160 C2280,90 2400,90 2520,160 C2640,230 2760,230 2880,160 L2880,320 L0,320 Z"/></svg>
+    </div>
+    <div class="wave wave--3">
+      <svg viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0,160 C120,112 240,112 360,160 C480,208 600,208 720,160 C840,112 960,112 1080,160 C1200,208 1320,208 1440,160 C1560,112 1680,112 1800,160 C1920,208 2040,208 2160,160 C2280,112 2400,112 2520,160 C2640,208 2760,208 2880,160 L2880,320 L0,320 Z"/></svg>
+    </div>
+    <div class="wave wave--4">
+      <svg viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0,160 C120,130 240,130 360,160 C480,190 600,190 720,160 C840,130 960,130 1080,160 C1200,190 1320,190 1440,160 C1560,130 1680,130 1800,160 C1920,190 2040,190 2160,160 C2280,130 2400,130 2520,160 C2640,190 2760,190 2880,160 L2880,320 L0,320 Z"/></svg>
+    </div>
+  </div>
+
   <!-- Skip link for accessibility -->
   <a href="#mainContent" class="skip-link">Chuyển đến nội dung chính</a>
   
@@ -80,13 +96,17 @@
         <span class="nav-brand-text">Trực Nhật Lớp</span>
       </a>
       <div class="nav-tabs" role="tablist">
-        <button role="tab" class="nav-tab active" data-tab="home" aria-selected="true" aria-controls="panel-home">
+        <button role="tab" class="nav-tab active" data-tab="home" id="tab-home" aria-selected="true" aria-controls="panel-home">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
           <span>Trang chủ</span>
         </button>
-        <button role="tab" class="nav-tab" data-tab="about" aria-selected="false" aria-controls="panel-about">
+        <button role="tab" class="nav-tab" data-tab="about" id="tab-about" aria-selected="false" aria-controls="panel-about">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
           <span>Giới thiệu</span>
+        </button>
+        <button role="tab" class="nav-tab" data-tab="request" id="tab-request" aria-selected="false" aria-controls="panel-request">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+          <span>Ủy quyền</span>
         </button>
       </div>
       <div class="nav-actions" id="navActions">
@@ -208,12 +228,99 @@
               </button>
             </div>
 
-            <div id="noticeDisplay" class="notice-display" role="region" aria-label="Thông báo lớp">
+            <div id="noticeDisplay" class="notice-display rich-content" role="region" aria-label="Thông báo lớp">
               Chưa có thông tin báo bài mới.
             </div>
 
-            <textarea id="noticeInput" rows="6" placeholder="Nhập nội dung báo bài, dặn dò kiểm tra hoặc thông báo lớp tại đây..." 
-                      class="hidden notice-input" aria-label="Nội dung báo bài"></textarea>
+            <div class="notice-editor">
+              <div id="noticeToolbar" class="notice-toolbar hidden" role="toolbar" aria-label="Định dạng văn bản">
+                <div class="toolbar-group">
+                  <button type="button" class="toolbar-btn" data-format="bold" title="Đậm (Ctrl+B)" aria-label="Đậm">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>
+                  </button>
+                  <button type="button" class="toolbar-btn" data-format="italic" title="Nghiêng (Ctrl+I)" aria-label="Nghiêng">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
+                  </button>
+                  <button type="button" class="toolbar-btn" data-format="underline" title="Gạch chân (Ctrl+U)" aria-label="Gạch chân">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"></path><line x1="4" y1="20" x2="20" y2="20"></line></svg>
+                  </button>
+                  <button type="button" class="toolbar-btn" data-format="strikeThrough" title="Gạch ngang" aria-label="Gạch ngang">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><path d="M10 19v-6a4 4 0 0 1 4-4 4 4 0 0 1 4 4v6"></path></svg>
+                  </button>
+                </div>
+                
+                <div class="toolbar-group">
+                  <button type="button" class="toolbar-btn" data-format="heading" data-value="h2" title="Tiêu đề lớn" aria-label="Tiêu đề lớn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><path d="M6 12v-6a4 4 0 0 1 4-4 4 4 0 0 1 4 4v6"></path><path d="M6 18v-6a4 4 0 0 1 4-4 4 4 0 0 1 4 4v6"></path></svg>
+                  </button>
+                </div>
+
+                <div class="toolbar-group">
+                  <select id="fontFamilySelect" class="toolbar-select" title="Phông chữ" aria-label="Chọn phông chữ">
+                    <optgroup label="Phông chữ">
+                      <option value="" selected>Mặc định</option>
+                      <option value="'Inter', sans-serif">Inter</option>
+                      <option value="'Georgia', serif">Georgia</option>
+                      <option value="'Times New Roman', serif">Times New Roman</option>
+                      <option value="'Courier New', monospace">Courier New</option>
+                      <option value="'Arial', sans-serif">Arial</option>
+                      <option value="'Verdana', sans-serif">Verdana</option>
+                      <option value="'Tahoma', sans-serif">Tahoma</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div class="toolbar-group">
+                  <select id="fontSizeSelect" class="toolbar-select" title="Cỡ chữ" aria-label="Chọn cỡ chữ">
+                    <optgroup label="Cỡ chữ">
+                      <option value="" selected>Mặc định</option>
+                      <option value="12px">Rất nhỏ (12px)</option>
+                      <option value="14px">Nhỏ (14px)</option>
+                      <option value="16px">Vừa (16px)</option>
+                      <option value="18px">Lớn (18px)</option>
+                      <option value="20px">Rất lớn (20px)</option>
+                      <option value="24px">Tiêu đề (24px)</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div class="toolbar-group">
+                  <select id="textColorSelect" class="toolbar-select" title="Màu chữ" aria-label="Chọn màu chữ">
+                    <optgroup label="Màu chữ">
+                      <option value="" selected>Mặc định</option>
+                      <option value="#0c4a6e">Xanh đậm</option>
+                      <option value="#0284c7">Xanh dương</option>
+                      <option value="#06b6d4">Xanh ngọc</option>
+                      <option value="#10b981">Xanh lá</option>
+                      <option value="#f59e0b">Cam</option>
+                      <option value="#ef4444">Đỏ</option>
+                      <option value="#6366f1">Tím</option>
+                      <option value="#ec4899">Hồng</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div class="toolbar-group">
+                  <button type="button" class="toolbar-btn" data-format="insertUnorderedList" title="Danh sách dấu chấm" aria-label="Danh sách dấu chấm">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"></line><line x1="9" y1="12" x2="20" y2="12"></line><line x1="9" y1="18" x2="20" y2="18"></line><line x1="4" y1="6" x2="4.01" y2="6"></line><line x1="4" y1="12" x2="4.01" y2="12"></line><line x1="4" y1="18" x2="4.01" y2="18"></line></svg>
+                  </button>
+                  <button type="button" class="toolbar-btn" data-format="insertOrderedList" title="Danh sách số" aria-label="Danh sách số">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 18v-6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h2"></path></svg>
+                  </button>
+                  <button type="button" class="toolbar-btn" data-format="blockquote" title="Trích dẫn" aria-label="Trích dẫn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1H3v2l-1 1 1 1h1v2c0 1 0 2 1 2 1 0 2-1 2-2 0-.25.25-.5.25-1 0-1 1-2 2-2h.75c0 2.75-2.5 5-7 5z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.5-2.5 5-7 5z"></path></svg>
+                  </button>
+                </div>
+
+                <div class="toolbar-group">
+                  <button type="button" class="toolbar-btn" data-format="removeFormat" title="Xóa định dạng" aria-label="Xóa định dạng">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v6m0 0l-3-3m3 3l3-3M8 12h8"></path><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 16a5 5 0 1 1 5-5"></path></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div id="noticeInput" class="notice-input hidden" contenteditable="true" role="textbox" aria-label="Nội dung báo bài" data-placeholder="Nhập nội dung báo bài, dặn dò kiểm tra hoặc thông báo lớp tại đây..."></div>
+            </div>
           </div>
         </section>
       </div>
@@ -230,7 +337,7 @@
             <div class="hero-shape shape-3"></div>
           </div>
           <div class="about-hero-content">
-            <div class="hero-badge">Phiên bản 2.0 • Cập nhật 2024</div>
+            <div class="hero-badge">Phiên bản 2.0 • Cập nhật 2026</div>
             <h1 class="hero-title">Bảng Phân Công <span class="gradient-text">Trực Nhật Lớp</span></h1>
             <p class="hero-description">Giải pháp quản lý lịch trực nhật thông minh, giúp lớp học tự chủ, công bằng & minh bạch. Đồng bộ realtime qua Firebase, không cần cài đặt.</p>
             <div class="hero-stats">
@@ -259,108 +366,35 @@
           <div class="section-header">
             <span class="section-tag">Tính năng nổi bật</span>
             <h2 class="section-title">Tất cả những gì lớp bạn cần</h2>
-            <p class="section-desc">Được thiết kế cho sự đơn giản, công bằng và hiệu quả</p>
+            <p class="section-desc">Bảng phân công trực nhật, Báo bài và Nhiều lớp học — đơn giản, công bằng và hiệu quả</p>
           </div>
           <div class="features-grid">
             <article class="feature-card" data-reveal="fade-up" style="transition-delay: 0ms;">
               <div class="feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
               </div>
-              <h3 class="feature-title">Bảng 6×6 Tuần</h3>
-              <p class="feature-desc">Quản lý 5 nhiệm vụ trong 6 tuần liên tiếp. Header tự động tính toán ngày tháng từ thứ 2 đến thứ 6.</p>
-            </article>
-            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 50ms;">
-              <div class="feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5V6M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"></path></svg>
-              </div>
-              <h3 class="feature-title">Kéo thả trực quan</h3>
-              <p class="feature-desc">Admin kéo tên học sinh từ danh sách vào ô trực nhật. Hỗ trợ di chuyển giữa các ô, xóa từng người.</p>
+              <h3 class="feature-title">Bảng phân công trực nhật</h3>
+              <p class="feature-desc">Xem lịch trực nhật 6 tuần với các đầu việc rõ ràng. Kéo thả trực quan hoặc tự động phân công ngẫu nhiên, công bằng cho cả lớp.</p>
             </article>
             <article class="feature-card" data-reveal="fade-up" style="transition-delay: 100ms;">
               <div class="feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 11 13 2 2 11"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7"></path><path d="M3 12h18"></path><path d="M10 16v-4"></path><path d="M14 16v-4"></path><path d="M18 16v-4"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
               </div>
-              <h3 class="feature-title">Tự động phân công ngẫu nhiên</h3>
-              <p class="feature-desc">Một click để phân công ngẫu nhiên công bằng. Thuật toán Fisher-Yates đảm bảo phân phối đều.</p>
-            </article>
-            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 150ms;">
-              <div class="feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-              </div>
-              <h3 class="feature-title">Đồng bộ Realtime</h3>
-              <p class="feature-desc">Firebase Realtime Database - mọi thay đổi cập nhật tức thì cho toàn bộ lớp, không cần tải lại trang.</p>
+              <h3 class="feature-title">Báo bài</h3>
+              <p class="feature-desc">Khu vực báo bài & ghi chú riêng: Admin soạn thảo với định dạng văn bản, học sinh xem cập nhật tức thì.</p>
             </article>
             <article class="feature-card" data-reveal="fade-up" style="transition-delay: 200ms;">
               <div class="feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               </div>
-              <h3 class="feature-title">Phân quyền Google Auth</h3>
-              <p class="feature-desc">Đăng nhập Google an toàn. Chỉ Admin mới chỉnh sửa, học sinh chỉ xem. Quản lý quyền qua Firebase.</p>
+              <h3 class="feature-title">Nhiều lớp học</h3>
+              <p class="feature-desc">Tạo và quản lý nhiều lớp, mỗi lớp có lịch trực nhật, báo bài và danh sách học sinh riêng biệt, chuyển đổi nhanh chóng.</p>
             </article>
-            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 250ms;">
-              <div class="feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-              </div>
-              <h3 class="feature-title">Báo bài & Ghi chú lớp</h3>
-              <p class="feature-desc">Khu vực thông báo riêng: Admin soạn thảo, học sinh xem. Hỗ trợ định dạng văn bản tự do.</p>
-            </article>
-            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 300ms;">
-              <div class="feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-              </div>
-              <h3 class="feature-title">Chu kỳ tuần mới</h3>
-              <p class="feature-desc">Reset bảng & cập nhật 6 tuần mới từ thứ 2 tuần hiện tại. Lịch sử tự động lưu trên Firebase.</p>
-            </article>
-            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 350ms;">
-              <div class="feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
-              </div>
-              <h3 class="feature-title">Không cần cài đặt</h3>
-              <p class="feature-desc">Chạy trực tiếp trên trình duyệt. Host miễn phí trên GitHub Pages, Netlify, Vercel...</p>
-            </article>
-          </div>
-        </section>
-
-        <!-- Tech Stack Section -->
-        <section class="about-section scroll-reveal" data-reveal="fade-up" style="transition-delay: 200ms;">
-          <div class="section-header">
-            <span class="section-tag">Công nghệ</span>
-            <h2 class="section-title">Xây dựng trên nền tảng hiện đại</h2>
-          </div>
-          <div class="tech-grid">
-            <div class="tech-item" data-reveal="fade-up" style="transition-delay: 0ms;">
-              <div class="tech-logo firebase" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-13H12V9h3.5c.83 0 1.5-.67 1.5-1.5S16.33 6 15.5 6H14v3h1.5c.83 0 1.5.67 1.5 1.5S16.33 12 15.5 12z"/></svg>
-              </div>
-              <span class="tech-name">Firebase</span>
-              <span class="tech-desc">Realtime DB + Auth</span>
-            </div>
-            <div class="tech-item" data-reveal="fade-up" style="transition-delay: 50ms;">
-              <div class="tech-logo tailwind" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-              </div>
-              <span class="tech-name">Tailwind CSS</span>
-              <span class="tech-desc">Utility-first styling</span>
-            </div>
-            <div class="tech-item" data-reveal="fade-up" style="transition-delay: 100ms;">
-              <div class="tech-logo vanilla" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
-              </div>
-              <span class="tech-name">Vanilla JS</span>
-              <span class="tech-desc">ES Modules, no build</span>
-            </div>
-            <div class="tech-item" data-reveal="fade-up" style="transition-delay: 150ms;">
-              <div class="tech-logo github" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-              </div>
-              <span class="tech-name">GitHub Pages</span>
-              <span class="tech-desc">Free hosting</span>
-            </div>
           </div>
         </section>
 
         <!-- Founder Section -->
-        <section class="about-section scroll-reveal" data-reveal="fade-up" style="transition-delay: 300ms;">
+        <section class="about-section scroll-reveal" data-reveal="fade-up" style="transition-delay: 200ms;">
           <div class="founder-card">
             <div class="founder-avatar" aria-hidden="true">
               <span>PMT</span>
@@ -370,10 +404,10 @@
               <h2 class="founder-name">PMT</h2>
               <p class="founder-desc">Phát triển với mục tiêu giúp các lớp học tự quản lý lịch trực nhật một cách công bằng, minh bạch và hiệu quả. Dự án mã nguồn mở, đóng góp cho cộng đồng giáo dục Việt Nam.</p>
               <div class="founder-links">
-                <a href="#" class="founder-link" aria-label="GitHub" target="_blank" rel="noopener">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                <a href="https://github.com/VuiHoc-MT/phancongtrucnhat/" class="founder-link" aria-label="GitHub" target="_blank" rel="noopener">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"></path></svg>
                 </a>
-                <a href="#" class="founder-link" aria-label="Email" target="_blank" rel="noopener">
+                <a href="#" class="founder-link is-disabled" aria-label="Email" title="Tạm thời chưa thêm email" aria-disabled="true">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                 </a>
               </div>
@@ -381,25 +415,58 @@
           </div>
         </section>
 
-        <!-- Footer CTA -->
-        <section class="about-cta scroll-reveal" data-reveal="fade-up" style="transition-delay: 400ms;">
+        <!-- CTA -->
+        <section class="about-cta scroll-reveal" data-reveal="fade-up" style="transition-delay: 200ms;">
           <div class="cta-card">
             <h2 class="cta-title">Sẵn sàng cho lớp của bạn?</h2>
-            <p class="cta-desc">Triển khai trong 1 phút. Chỉ cần host file lên GitHub Pages và cấu hình Firebase.</p>
+            <p class="cta-desc">Đăng nhập ngay hoặc gửi yêu cầu đến chủ web để được ủy quyền admin</p>
             <div class="cta-actions">
-              <a href="#" class="btn btn-primary" target="_blank" rel="noopener">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                <span>Xem mã nguồn</span>
-              </a>
-              <button class="btn btn-secondary" onclick="switchTab('home')" type="button">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                <span>Bắt đầu dùng</span>
+              <button class="btn btn-primary" type="button" onclick="loginWithGoogle()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                <span>Đăng nhập ngay</span>
               </button>
+              <button class="btn btn-secondary" type="button" onclick="switchTab('request')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+                <span>Yêu cầu ủy quyền</span>
+              </button>
+            </div>
+            <div class="cta-contact">
+              <a class="cta-contact-link" href="https://github.com/VuiHoc-MT/phancongtrucnhat/" target="_blank" rel="noopener" aria-label="GitHub dự án">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"></path></svg>
+                <span>GitHub</span>
+              </a>
+              <span class="cta-contact-link is-disabled" title="Tạm thời chưa thêm email" aria-disabled="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                <span>Email (đang cập nhật)</span>
+              </span>
             </div>
           </div>
         </section>
       </div>
     </section>
+    <!-- PANEL: YÊU CẦU ỦY QUYỀN -->
+    <section role="tabpanel" id="panel-request" class="tab-panel" aria-label="Yêu cầu ủy quyền" tabindex="0" hidden>
+      <div class="request-container">
+        <div class="request-card scroll-reveal" data-reveal="fade-up">
+          <div class="request-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+          </div>
+          <h1 class="request-title">Yêu cầu ủy quyền Admin</h1>
+          <p class="request-desc">Bạn gửi tới admin web (PMT) để yêu cầu quyền admin, hãy ghi email của bạn ở bên dưới:</p>
+          <div class="request-form">
+            <label class="request-label" for="requestEmail">Email của bạn</label>
+            <input type="email" id="requestEmail" class="form-input request-input" placeholder="ban@vidu.com" autocomplete="email" onkeydown="if(event.key==='Enter'){event.preventDefault();submitAdminRequest();}" />
+            <p class="form-hint">Email của bạn sẽ được chuyển tới chủ web để xét duyệt quyền admin.</p>
+            <button type="button" class="btn btn-primary request-submit" onclick="submitAdminRequest()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              <span>Gửi yêu cầu</span>
+            </button>
+          </div>
+          <p class="request-note">Lưu ý: Chỉ chủ web (PMT) mới có thể cấp quyền admin. Yêu cầu của bạn sẽ được xem xét và phản hồi qua email.</p>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- Back to top button -->
