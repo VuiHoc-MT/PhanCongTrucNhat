@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="description" content="Bảng phân công trực nhật lớp học - Quản lý lịch trực nhật 6 tuần, báo bài & ghi chú, đồng bộ realtime qua Firebase" />
+  <title>Bảng Phân Công Trực Nhật Lớp</title>
+
+  <!-- Open Graph / Social Sharing -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://unknow23-sketch.github.io/" />
+  <meta property="og:title" content="Lịch Trực Nhật & Báo Bài Lớp" />
+  <meta property="og:description" content="Xem lịch trực nhật 6 tuần và thông tin báo bài, dặn dò mới nhất của lớp." />
+  <meta property="og:image" content="https://via.placeholder.com/1200x630/4f46e5/ffffff?text=Tr%E1%BB%B1c+Nh%E1%BA%ADt+L%E1%BB%9Bp" />
+  <meta property="og:site_name" content="Trực Nhật Lớp" />
+  <meta property="og:locale" content="vi_VN" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Lịch Trực Nhật & Báo Bài Lớp" />
+  <meta name="twitter:description" content="Quản lý lịch trực nhật lớp học, báo bài & ghi chú - Đồng bộ realtime" />
+  <meta name="twitter:image" content="https://via.placeholder.com/1200x630/4f46e5/ffffff?text=Tr%E1%BB%B1c+Nh%E1%BA%ADt+L%E1%BB%9Bp" />
+
+  <!-- PWA / Mobile App Support -->
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.svg" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Trực Nhật Lớp" />
+
+  <!-- Preconnect to Firebase for faster connection -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://web-lop-35a2d-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin />
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin />
+
+  <!-- Fonts with font-display: swap for performance -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="./style.css" />
+
+  <!-- Base path handling for GitHub Pages subdirectory deployments -->
+  <script>
+    (function() {
+      // Detect if running on GitHub Pages (username.github.io/repo-name)
+      var path = window.location.pathname;
+      var match = path.match(/^\/([^\/]+)\//);
+      if (match && window.location.hostname.includes('github.io')) {
+        window.BASE_PATH = '/' + match[1];
+      } else {
+        window.BASE_PATH = '';
+      }
+      // Fix asset paths
+      document.querySelectorAll('link[href^="./"], script[src^="./"]').forEach(function(el) {
+        var attr = el.hasAttribute('href') ? 'href' : 'src';
+        var val = el.getAttribute(attr);
+        if (val.startsWith('./')) {
+          el.setAttribute(attr, window.BASE_PATH + val.slice(1));
+        }
+      });
+    })();
+  </script>
+</head>
+<body class="bg-aurora text-slate-800 min-h-screen font-sans">
+  <!-- Skip link for accessibility -->
+  <a href="#mainContent" class="skip-link">Chuyển đến nội dung chính</a>
+  
+  <!-- Thanh điều hướng trên cùng -->
+  <nav class="top-nav" id="topNav" role="navigation" aria-label="Điều hướng chính">
+    <div class="top-nav-inner">
+      <a href="#home" class="nav-brand" data-tab="home" aria-label="Trang chủ">
+        <span class="nav-brand-icon" aria-hidden="true">TN</span>
+        <span class="nav-brand-text">Trực Nhật Lớp</span>
+      </a>
+      <div class="nav-tabs" role="tablist">
+        <button role="tab" class="nav-tab active" data-tab="home" aria-selected="true" aria-controls="panel-home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span>Trang chủ</span>
+        </button>
+        <button role="tab" class="nav-tab" data-tab="about" aria-selected="false" aria-controls="panel-about">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>Giới thiệu</span>
+        </button>
+      </div>
+      <div class="nav-actions" id="navActions">
+        <span id="roleBadge" class="role-badge guest">
+          Chế độ: Khách (Chỉ xem)
+        </span>
+        <!-- Class Selector Dropdown -->
+        <div id="classSelector" class="hidden dropdown" role="menu" aria-label="Chọn lớp">
+          <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="classDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-label="Lớp hiện tại">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span id="currentClassName">Chọn lớp</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="dropdown-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="dropdown-menu hidden" id="classDropdownMenu" role="menu">
+            <div class="dropdown-header">
+              <span class="dropdown-title">Danh sách lớp</span>
+              <button type="button" class="btn btn-ghost btn-icon btn-sm" id="manageClassesBtn" aria-label="Quản lý lớp" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </button>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div id="classList" class="dropdown-items" role="listbox"></div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-footer">
+              <button type="button" class="btn btn-primary btn-sm w-full" id="addClassBtn" style="display: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Thêm lớp mới (nhân bản)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <button id="loginBtn" onclick="loginWithGoogle()" class="btn btn-primary btn-sm" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          <span>Đăng nhập Admin</span>
+        </button>
+        <button id="logoutBtn" onclick="logoutAdmin()" class="hidden btn btn-danger btn-sm" type="button">
+          Thoát Admin
+        </button>
+      </div>
+    </div>
+    <div class="nav-indicator" id="navIndicator" aria-hidden="true"></div>
+  </nav>
+
+  <!-- Progress scroll bar -->
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <main id="mainContent" class="main-content">
+    <!-- PANEL: TRANG CHỦ -->
+    <section role="tabpanel" id="panel-home" class="tab-panel active" aria-labelledby="tab-home" tabindex="0">
+      <div class="page-header fade-in-up">
+        <div class="page-header-content">
+          <h1 class="page-title">Lịch Trực Nhật Lớp</h1>
+          <p class="page-subtitle">Quản lý phân công trực nhật 6 tuần, báo bài & ghi chú lớp - Đồng bộ realtime</p>
+        </div>
+        <div id="syncStatus" class="sync-status">● Đang kết nối máy chủ...</div>
+      </div>
+
+      <div id="mainLayout" class="layout-grid layout-grid--guest">
+        <!-- CỘT TRÁI: Danh sách lớp (Chỉ hiện khi là Admin) -->
+        <aside id="adminSidebar" class="hidden admin-sidebar w-full lg:w-80 flex-shrink-0 fade-in-up" role="complementary" aria-label="Quản lý lớp">
+          <div class="sidebar-header">
+            <h2 class="sidebar-title">Danh sách lớp</h2>
+            <span id="studentCount" class="student-count">0 học sinh</span>
+          </div>
+          <p class="sidebar-desc">Nhập mỗi tên 1 dòng rồi bấm Cập nhật, sau đó kéo thả vào bảng.</p>
+          
+          <textarea id="studentInput" rows="6" placeholder="Nguyễn Văn A&#10;Trần Thị B&#10;Lê Văn C..." 
+                    class="textarea-styled mb-4" aria-label="Danh sách học sinh"></textarea>
+          <button onclick="updateStudentList()" class="btn btn-primary w-full" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Cập nhật danh sách</span>
+          </button>
+
+          <div class="sidebar-hint">Kéo tên vào bảng:</div>
+          <div id="studentPool" class="student-pool" role="list" aria-label="Danh sách học sinh"></div>
+        </aside>
+
+        <!-- CỘT PHẢI: Bảng 6x6 -->
+        <section class="content-card flex-1 flex flex-col min-w-0" role="main" aria-label="Bảng phân công">
+          <div id="adminToolbar" class="toolbar hidden">
+            <div class="toolbar-actions flex gap-2">
+              <button onclick="autoAssignRandom()" class="btn btn-primary" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 11 13 2 2 11"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7"></path><path d="M3 12h18"></path><path d="M10 16v-4"></path><path d="M14 16v-4"></path><path d="M18 16v-4"></path></svg>
+                <span>Tự động phân công</span>
+              </button>
+              <button onclick="clearSchedule()" class="btn btn-danger" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Xóa bảng</span>
+              </button>
+              <button onclick="startNewCycle()" class="btn btn-success" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                <span>Chu kỳ tuần mới</span>
+              </button>
+            </div>
+            <span class="toolbar-hint">* Mọi thay đổi tự động lưu lên mạng cho cả lớp xem</span>
+          </div>
+
+          <div class="table-wrapper flex-1 overflow-auto">
+            <table class="schedule-table" role="grid" aria-label="Lịch trực nhật 6 tuần">
+              <thead>
+                <tr id="tableHeader" class="bg-slate-50">
+                  <th scope="col" class="border border-slate-200 p-3 text-left w-44 rounded-tl-xl">Công việc</th>
+                </tr>
+              </thead>
+              <tbody id="scheduleBody" class="text-sm"></tbody>
+            </table>
+          </div>
+
+          <!-- KHUNG BÁO BÀI / GHI CHÚ LỚP -->
+          <div class="notice-section">
+            <div class="notice-header">
+              <h3 class="notice-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Báo bài & Ghi chú của lớp
+              </h3>
+              <button id="saveNoticeBtn" onclick="saveClassNotice()" class="hidden btn btn-primary btn-sm" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                <span>Lưu báo bài</span>
+              </button>
+            </div>
+
+            <div id="noticeDisplay" class="notice-display" role="region" aria-label="Thông báo lớp">
+              Chưa có thông tin báo bài mới.
+            </div>
+
+            <textarea id="noticeInput" rows="6" placeholder="Nhập nội dung báo bài, dặn dò kiểm tra hoặc thông báo lớp tại đây..." 
+                      class="hidden notice-input" aria-label="Nội dung báo bài"></textarea>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- PANEL: GIỚI THIỆU -->
+    <section role="tabpanel" id="panel-about" class="tab-panel" aria-labelledby="tab-about" tabindex="0" hidden>
+      <div class="about-container">
+        <!-- Hero Section -->
+        <section class="about-hero scroll-reveal" data-reveal="fade-up">
+          <div class="about-hero-bg" aria-hidden="true">
+            <div class="hero-shape shape-1"></div>
+            <div class="hero-shape shape-2"></div>
+            <div class="hero-shape shape-3"></div>
+          </div>
+          <div class="about-hero-content">
+            <div class="hero-badge">Phiên bản 2.0 • Cập nhật 2024</div>
+            <h1 class="hero-title">Bảng Phân Công <span class="gradient-text">Trực Nhật Lớp</span></h1>
+            <p class="hero-description">Giải pháp quản lý lịch trực nhật thông minh, giúp lớp học tự chủ, công bằng & minh bạch. Đồng bộ realtime qua Firebase, không cần cài đặt.</p>
+            <div class="hero-stats">
+              <div class="stat-item">
+                <span class="stat-number" data-count="6">0</span>
+                <span class="stat-label">Tuần quản lý</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-number" data-count="5">0</span>
+                <span class="stat-label">Nhiệm vụ</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-number" data-count="50">0</span>
+                <span class="stat-label">Học sinh tối đa</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-number" data-count="99">0</span>
+                <span class="stat-label">% Uptime</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="about-section scroll-reveal" data-reveal="fade-up" style="transition-delay: 100ms;">
+          <div class="section-header">
+            <span class="section-tag">Tính năng nổi bật</span>
+            <h2 class="section-title">Tất cả những gì lớp bạn cần</h2>
+            <p class="section-desc">Được thiết kế cho sự đơn giản, công bằng và hiệu quả</p>
+          </div>
+          <div class="features-grid">
+            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 0ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+              </div>
+              <h3 class="feature-title">Bảng 6×6 Tuần</h3>
+              <p class="feature-desc">Quản lý 5 nhiệm vụ trong 6 tuần liên tiếp. Header tự động tính toán ngày tháng từ thứ 2 đến thứ 6.</p>
+            </article>
+            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 50ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5V6M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"></path></svg>
+              </div>
+              <h3 class="feature-title">Kéo thả trực quan</h3>
+              <p class="feature-desc">Admin kéo tên học sinh từ danh sách vào ô trực nhật. Hỗ trợ di chuyển giữa các ô, xóa từng người.</p>
+            </article>
+            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 100ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 11 13 2 2 11"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7"></path><path d="M3 12h18"></path><path d="M10 16v-4"></path><path d="M14 16v-4"></path><path d="M18 16v-4"></path></svg>
+              </div>
+              <h3 class="feature-title">Tự động phân công ngẫu nhiên</h3>
+              <p class="feature-desc">Một click để phân công ngẫu nhiên công bằng. Thuật toán Fisher-Yates đảm bảo phân phối đều.</p>
+            </article>
+            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 150ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </div>
+              <h3 class="feature-title">Đồng bộ Realtime</h3>
+              <p class="feature-desc">Firebase Realtime Database - mọi thay đổi cập nhật tức thì cho toàn bộ lớp, không cần tải lại trang.</p>
+            </article>
+            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 200ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </div>
+              <h3 class="feature-title">Phân quyền Google Auth</h3>
+              <p class="feature-desc">Đăng nhập Google an toàn. Chỉ Admin mới chỉnh sửa, học sinh chỉ xem. Quản lý quyền qua Firebase.</p>
+            </article>
+            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 250ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              </div>
+              <h3 class="feature-title">Báo bài & Ghi chú lớp</h3>
+              <p class="feature-desc">Khu vực thông báo riêng: Admin soạn thảo, học sinh xem. Hỗ trợ định dạng văn bản tự do.</p>
+            </article>
+            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 300ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+              </div>
+              <h3 class="feature-title">Chu kỳ tuần mới</h3>
+              <p class="feature-desc">Reset bảng & cập nhật 6 tuần mới từ thứ 2 tuần hiện tại. Lịch sử tự động lưu trên Firebase.</p>
+            </article>
+            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 350ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+              </div>
+              <h3 class="feature-title">Không cần cài đặt</h3>
+              <p class="feature-desc">Chạy trực tiếp trên trình duyệt. Host miễn phí trên GitHub Pages, Netlify, Vercel...</p>
+            </article>
+          </div>
+        </section>
+
+        <!-- Tech Stack Section -->
+        <section class="about-section scroll-reveal" data-reveal="fade-up" style="transition-delay: 200ms;">
+          <div class="section-header">
+            <span class="section-tag">Công nghệ</span>
+            <h2 class="section-title">Xây dựng trên nền tảng hiện đại</h2>
+          </div>
+          <div class="tech-grid">
+            <div class="tech-item" data-reveal="fade-up" style="transition-delay: 0ms;">
+              <div class="tech-logo firebase" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-13H12V9h3.5c.83 0 1.5-.67 1.5-1.5S16.33 6 15.5 6H14v3h1.5c.83 0 1.5.67 1.5 1.5S16.33 12 15.5 12z"/></svg>
+              </div>
+              <span class="tech-name">Firebase</span>
+              <span class="tech-desc">Realtime DB + Auth</span>
+            </div>
+            <div class="tech-item" data-reveal="fade-up" style="transition-delay: 50ms;">
+              <div class="tech-logo tailwind" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              </div>
+              <span class="tech-name">Tailwind CSS</span>
+              <span class="tech-desc">Utility-first styling</span>
+            </div>
+            <div class="tech-item" data-reveal="fade-up" style="transition-delay: 100ms;">
+              <div class="tech-logo vanilla" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+              </div>
+              <span class="tech-name">Vanilla JS</span>
+              <span class="tech-desc">ES Modules, no build</span>
+            </div>
+            <div class="tech-item" data-reveal="fade-up" style="transition-delay: 150ms;">
+              <div class="tech-logo github" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              </div>
+              <span class="tech-name">GitHub Pages</span>
+              <span class="tech-desc">Free hosting</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Founder Section -->
+        <section class="about-section scroll-reveal" data-reveal="fade-up" style="transition-delay: 300ms;">
+          <div class="founder-card">
+            <div class="founder-avatar" aria-hidden="true">
+              <span>PMT</span>
+            </div>
+            <div class="founder-info">
+              <span class="founder-label">NGƯỜI SÁNG LẬP</span>
+              <h2 class="founder-name">PMT</h2>
+              <p class="founder-desc">Phát triển với mục tiêu giúp các lớp học tự quản lý lịch trực nhật một cách công bằng, minh bạch và hiệu quả. Dự án mã nguồn mở, đóng góp cho cộng đồng giáo dục Việt Nam.</p>
+              <div class="founder-links">
+                <a href="#" class="founder-link" aria-label="GitHub" target="_blank" rel="noopener">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                </a>
+                <a href="#" class="founder-link" aria-label="Email" target="_blank" rel="noopener">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Footer CTA -->
+        <section class="about-cta scroll-reveal" data-reveal="fade-up" style="transition-delay: 400ms;">
+          <div class="cta-card">
+            <h2 class="cta-title">Sẵn sàng cho lớp của bạn?</h2>
+            <p class="cta-desc">Triển khai trong 1 phút. Chỉ cần host file lên GitHub Pages và cấu hình Firebase.</p>
+            <div class="cta-actions">
+              <a href="#" class="btn btn-primary" target="_blank" rel="noopener">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                <span>Xem mã nguồn</span>
+              </a>
+              <button class="btn btn-secondary" onclick="switchTab('home')" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <span>Bắt đầu dùng</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <!-- Back to top button -->
+  <button class="back-to-top" id="backToTop" aria-label="Về đầu trang" hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"></path></svg>
+  </button>
+
+  <!-- Class Management Modal -->
+  <div class="modal-overlay" id="classModal" role="dialog" aria-modal="true" aria-labelledby="classModalTitle" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="classModalTitle">Quản lý lớp học</h2>
+        <button type="button" class="modal-close" id="classModalClose" aria-label="Đóng">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="newClassNameInput">Tên lớp mới</label>
+          <input type="text" id="newClassNameInput" class="form-input" placeholder="VD: 12A1, 11B2..." maxlength="30">
+          <p class="form-hint">Sẽ nhân bản thời khóa biểu & báo bài từ lớp hiện tại</p>
+        </div>
+        <div class="form-group" id="renameClassGroup" style="display: none;">
+          <label class="form-label" for="renameClassInput">Đổi tên lớp</label>
+          <input type="text" id="renameClassInput" class="form-input" placeholder="Nhập tên mới" maxlength="30">
+        </div>
+        <div id="classListContainer">
+          <p class="text-sm text-slate-500 text-center py-4" id="emptyClassState">Chưa có lớp nào. Tạo lớp đầu tiên!</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="classModalCancel">Hủy</button>
+        <button type="button" class="btn btn-primary" id="classModalConfirm">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
