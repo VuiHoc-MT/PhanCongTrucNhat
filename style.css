@@ -724,6 +724,12 @@ header {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
+.class-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .current-badge {
   font-size: 10px;
   font-weight: 700;
@@ -1044,6 +1050,31 @@ main {
   opacity: 0.4;
   transform: scale(0.95) rotate(2deg);
   z-index: 100;
+}
+
+/* Tap-to-assign: selected student highlighted */
+.student-drag-item.selected {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  border-color: var(--primary);
+  color: white;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+  transform: scale(1.02);
+}
+.student-drag-item.selected .student-drag-count {
+  background: white;
+  color: var(--primary);
+}
+.student-drag-item.selected .student-drag-handle {
+  color: white;
+}
+
+/* Cell tap highlight when a student is selected */
+.cell.tap-ready {
+  cursor: pointer;
+}
+.cell.tap-ready:hover {
+  background: rgba(2, 132, 199, 0.1);
+  border: 2px dashed var(--primary);
 }
 
 .student-drag-name {
@@ -2488,7 +2519,7 @@ main {
 
 .notice-display.rich-content,
 .notice-input {
-  white-space: pre-wrap;
+  white-space: normal;
   word-wrap: break-word;
   line-height: 1.7;
   font-family: inherit;
@@ -2760,6 +2791,17 @@ main {
 /* ===========================================
    ACCESSIBILITY & FORM UTILITIES
    =========================================== */
+/* Critical: fallback hidden class (in case Tailwind CDN is slow/blocked) */
+.hidden {
+  display: none !important;
+}
+
+/* Tab panels: avoid focus outline around whole section */
+.tab-panel:focus,
+.tab-panel:focus-visible {
+  outline: none !important;
+}
+
 .skip-link {
   position: absolute;
   left: -9999px;

@@ -12,7 +12,7 @@
   <meta property="og:url" content="https://vuihoc-mt.github.io/phancongtrucnhat/" />
   <meta property="og:title" content="Lịch Trực Nhật & Báo Bài Lớp" />
   <meta property="og:description" content="Xem lịch trực nhật 6 tuần và thông tin báo bài, dặn dò mới nhất của lớp." />
-  <meta property="og:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/icons/icon-512.svg" />
+  <meta property="og:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/favicon.svg" />
   <meta property="og:site_name" content="Trực Nhật Lớp" />
   <meta property="og:locale" content="vi_VN" />
 
@@ -20,11 +20,11 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Lịch Trực Nhật & Báo Bài Lớp" />
   <meta name="twitter:description" content="Quản lý lịch trực nhật lớp học, báo bài & ghi chú - Đồng bộ realtime" />
-  <meta name="twitter:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/icons/icon-512.svg" />
+  <meta name="twitter:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/favicon.svg" />
 
   <!-- PWA / Mobile App Support -->
   <link rel="manifest" href="./manifest.json" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.svg" />
+  <link rel="apple-touch-icon" href="./favicon.svg" />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -46,27 +46,6 @@
   <!-- Custom Styles -->
   <link rel="stylesheet" href="./style.css" />
 
-  <!-- Base path handling for GitHub Pages subdirectory deployments -->
-  <script>
-    (function() {
-      // Detect if running on GitHub Pages (username.github.io/repo-name)
-      var path = window.location.pathname;
-      var match = path.match(/^\/([^\/]+)\//);
-      if (match && window.location.hostname.includes('github.io')) {
-        window.BASE_PATH = '/' + match[1];
-      } else {
-        window.BASE_PATH = '';
-      }
-      // Fix asset paths
-      document.querySelectorAll('link[href^="./"], script[src^="./"]').forEach(function(el) {
-        var attr = el.hasAttribute('href') ? 'href' : 'src';
-        var val = el.getAttribute(attr);
-        if (val.startsWith('./')) {
-          el.setAttribute(attr, window.BASE_PATH + val.slice(1));
-        }
-      });
-    })();
-  </script>
 </head>
 <body class="bg-ocean text-slate-800 min-h-screen font-sans">
   <!-- Hiệu ứng sóng biển nhiều lớp, cuộn liên tục -->
@@ -123,8 +102,8 @@
           <div class="dropdown-menu hidden" id="classDropdownMenu" role="menu">
             <div class="dropdown-header">
               <span class="dropdown-title">Danh sách lớp</span>
-              <button type="button" class="btn btn-ghost btn-icon btn-sm" id="manageClassesBtn" aria-label="Quản lý lớp" style="display: none;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <button type="button" class="btn btn-ghost btn-icon btn-sm" id="manageClassesBtn" aria-label="Quản lý lớp" title="Quản lý lớp" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
               </button>
             </div>
             <div class="dropdown-divider"></div>
@@ -154,7 +133,7 @@
   <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
   <!-- Admin Panel (Slide-in from left) -->
-  <aside id="adminPanel" class="admin-panel" role="region" aria-label="Quản lý Admin" hidden>
+  <aside id="adminPanel" class="admin-panel" role="region" aria-label="Quản lý Admin" hidden inert>
     <div class="admin-panel-inner">
       <!-- Panel Header (title + toggle) -->
       <div class="admin-panel-header">
@@ -202,7 +181,7 @@
             <div class="admin-tabpanel-header">
               <h3 id="admin-tab-dragdrop-label">Kéo thả vào bảng</h3>
             </div>
-            <p class="admin-tabpanel-desc">Kéo tên học sinh vào ô trực nhật. Số lượt đã dùng hiển thị bên cạnh.</p>
+            <p class="admin-tabpanel-desc">Kéo tên học sinh vào ô trực nhật. Trên điện thoại, chạm để chọn học sinh rồi chạm vào ô lịch để phân công.</p>
             <div id="studentDragList" class="student-drag-list" role="list" aria-label="Danh sách học sinh để kéo thả"></div>
           </section>
         </div>
@@ -217,7 +196,7 @@
 
   <main id="mainContent" class="main-content">
     <!-- PANEL: TRANG CHỦ -->
-    <section role="tabpanel" id="panel-home" class="tab-panel active" aria-labelledby="tab-home" tabindex="0">
+    <section role="tabpanel" id="panel-home" class="tab-panel active" aria-labelledby="tab-home">
       <div class="page-header fade-in-up">
         <div class="page-header-content">
           <h1 class="page-title">Lịch Trực Nhật Lớp</h1>
@@ -370,7 +349,7 @@
     </section>
 
     <!-- PANEL: GIỚI THIỆU -->
-    <section role="tabpanel" id="panel-about" class="tab-panel" aria-labelledby="tab-about" tabindex="0" hidden>
+    <section role="tabpanel" id="panel-about" class="tab-panel" aria-labelledby="tab-about" hidden>
       <div class="about-container">
         <!-- Hero Section -->
         <section class="about-hero scroll-reveal" data-reveal="fade-up">
@@ -489,7 +468,7 @@
     </section>
 
     <!-- PANEL: YÊU CẦU ỦY QUYỀN -->
-    <section role="tabpanel" id="panel-request" class="tab-panel" aria-labelledby="tab-request" tabindex="0" hidden>
+    <section role="tabpanel" id="panel-request" class="tab-panel" aria-labelledby="tab-request" hidden>
       <div class="request-container">
         <div class="request-card scroll-reveal" data-reveal="fade-up">
           <div class="request-icon" aria-hidden="true">

@@ -1,4 +1,13 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="6" fill="#4f46e5"/>
-  <text x="16" y="22" font-family="system-ui, sans-serif" font-size="18" font-weight="800" fill="white" text-anchor="middle" dominant-baseline="middle">TN</text>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="oceanGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#oceanGrad)"/>
+  <path d="M0 384C64 352 128 352 192 384C256 416 320 416 384 384C448 352 512 352 512 352V512H0V384Z" fill="white" fill-opacity="0.12"/>
+  <path d="M0 320C64 288 128 288 192 320C256 352 320 352 384 320C448 288 512 288 512 288V512H0V320Z" fill="white" fill-opacity="0.18"/>
+  <path d="M0 448C64 416 128 416 192 448C256 480 320 480 384 448C448 416 512 416 512 416V512H0V448Z" fill="white" fill-opacity="0.08"/>
+  <text x="256" y="260" font-family="system-ui, -apple-system, sans-serif" font-size="200" font-weight="800" fill="white" text-anchor="middle" dominant-baseline="middle">TN</text>
 </svg>

@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, set, update, get, onValue, push, remove, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDeO2BkAXLVRUG5tW2uOX1aQ3VIPSAmobE",
@@ -46,6 +46,39 @@ function createNewWeekHeaders() {
 
 let weekHeaders = createNewWeekHeaders();
 
+// ===========================================
+// UTILITY FUNCTIONS
+// ===========================================
+
+/**
+ * Convert Firebase object back to array (Firebase converts arrays with holes to objects)
+ */
+function toArray(val) {
+  if (Array.isArray(val)) return val;
+  if (val && typeof val === 'object') {
+    return Object.keys(val)
+      .sort((a, b) => Number(a) - Number(b))
+      .map(key => val[key]);
+  }
+  return [];
+}
+
+/**
+ * Normalize schedule object - convert cell values from Firebase objects to arrays
+ */
+function normalizeSchedule(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const result = {};
+  Object.keys(raw).forEach(key => {
+    result[key] = toArray(raw[key]);
+  });
+  return result;
+}
+
+// ===========================================
+// FIREBASE INIT
+// ===========================================
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const classesRef = ref(db, "trucNhatLop/classes");
@@ -55,7 +88,7 @@ const provider = new GoogleAuthProvider();
 
 let isAdmin = false;
 let currentUser = null;
-let classesData = {}; // { classId: { name, createdAt, students?, schedule?, weekHeaders?, notice? } }
+let classesData = {};
 let currentClassId = null;
 let currentClassData = {
   students: [],
@@ -63,8 +96,11 @@ let currentClassData = {
   weekHeaders: weekHeaders,
   notice: "Chưa có thông tin báo bài mới."
 };
-let currentClassListener = null; // Track active listener for current class
-let classesListListener = null; // Track active listener for classes list
+let currentClassListener = null;
+let classesListListener = null;
+let authCheckSeq = 0;
+let isLoadingClass = false;
+let tapSelectedStudent = null; // Name of student selected for tap-to-assign (mobile)
 
 function getDefaultClassData() {
   return {
@@ -90,7 +126,8 @@ function updateStudentPool() {
   const pool = document.getElementById("studentPool");
   if (pool) {
     pool.innerHTML = "";
-    currentClassData.students.forEach((name) => {
+    const students = toArray(currentClassData.students);
+    students.forEach((name) => {
       const chip = document.createElement("div");
       chip.textContent = name;
       chip.className = "student-chip";
@@ -106,23 +143,21 @@ function updateStudentPool() {
   }
 }
 
-// Cập nhật danh sách kéo thả trong admin panel (có hiển thị số lượt đã dùng)
 function updateStudentDragList() {
   const list = document.getElementById("studentDragList");
   if (!list) return;
   
-  // Tính số lượt mỗi học sinh được phân công
   const usageCount = {};
-  if (currentClassData.schedule) {
-    Object.values(currentClassData.schedule).forEach(arr => {
-      arr.forEach(name => {
-        usageCount[name] = (usageCount[name] || 0) + 1;
-      });
+  const schedule = normalizeSchedule(currentClassData.schedule);
+  Object.values(schedule).forEach(arr => {
+    toArray(arr).forEach(name => {
+      usageCount[name] = (usageCount[name] || 0) + 1;
     });
-  }
+  });
   
   list.innerHTML = "";
-  currentClassData.students.forEach((name, idx) => {
+  const students = toArray(currentClassData.students);
+  students.forEach((name, idx) => {
     const count = usageCount[name] || 0;
     const item = document.createElement("div");
     item.className = "student-drag-item";
@@ -144,14 +179,77 @@ function updateStudentDragList() {
     };
     item.ondragend = () => item.classList.remove("dragging");
     
+    // Restore selection state after re-render
+    if (tapSelectedStudent === name) {
+      item.classList.add('selected');
+      item.dataset.tapSelected = 'true';
+    }
+    
+    // Tap-to-assign: tap to select/deselect, then tap a cell to assign
+    item.onclick = () => {
+      if (!isAdmin) return;
+      
+      if (tapSelectedStudent === name) {
+        // Tapping the selected student again deselects
+        tapSelectedStudent = null;
+        item.classList.remove('selected');
+        item.dataset.tapSelected = 'false';
+        // Remove tap-ready highlights from cells
+        document.querySelectorAll('.cell.tap-ready').forEach(cell => cell.classList.remove('tap-ready'));
+      } else {
+        // Select this student
+        tapSelectedStudent = name;
+        document.querySelectorAll('.student-drag-item.selected').forEach(el => {
+          el.classList.remove('selected');
+          el.dataset.tapSelected = 'false';
+        });
+        item.classList.add('selected');
+        item.dataset.tapSelected = 'true';
+        // Mark all cells as tap-ready
+        document.querySelectorAll('.cell').forEach(cell => cell.classList.add('tap-ready'));
+        
+        // On mobile, auto-collapse admin panel to reveal the schedule
+        if (window.matchMedia('(max-width: 768px)').matches) {
+          collapseAdminPanelForMobile();
+        }
+      }
+    };
+    
     list.appendChild(item);
   });
+}
+
+// Collapse admin panel on mobile so the schedule is tappable
+function collapseAdminPanelForMobile() {
+  const panel = document.getElementById("adminPanel");
+  const toggle = document.getElementById("adminPanelToggle");
+  if (panel && panel.classList.contains("is-open")) {
+    panel.classList.remove("is-open");
+    panel.inert = true;
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-label", "Mở bảng điều khiển");
+    }
+    const openBtn = document.getElementById("adminPanelOpenBtn");
+    if (openBtn) openBtn.classList.remove("hidden");
+  }
+}
+
+// Clear tap selection and reset cell highlights
+function clearTapSelection() {
+  tapSelectedStudent = null;
+  document.querySelectorAll('.student-drag-item.selected').forEach(el => {
+    el.classList.remove('selected');
+    el.dataset.tapSelected = 'false';
+  });
+  document.querySelectorAll('.cell.tap-ready').forEach(cell => cell.classList.remove('tap-ready'));
 }
 
 function updateStudentCount() {
   const countEl = document.getElementById("studentCount");
   if (countEl) {
-    countEl.textContent = `${currentClassData.students.length} học sinh`;
+    const students = toArray(currentClassData.students);
+    countEl.textContent = `${students.length} học sinh`;
   }
 }
 
@@ -177,14 +275,12 @@ function renderClassSelector() {
     return;
   }
   
-  // Set current class name
+  // Set current class name - DON'T auto-select here
   if (currentClassId && classesData[currentClassId]) {
     nameEl.textContent = classesData[currentClassId].name;
-  } else if (classIds.length > 0) {
-    // Auto-select first class if none selected
-    currentClassId = classIds[0];
-    loadClassData(currentClassId);
-    nameEl.textContent = classesData[currentClassId].name;
+  } else if (classIds.length > 0 && !currentClassId) {
+    // Only set display name, don't auto-select (handled in loadClassesFromFirebase)
+    nameEl.textContent = classesData[classIds[0]].name;
   }
   
   // Show/hide admin-only buttons
@@ -220,10 +316,11 @@ function switchClass(classId) {
     return;
   }
   
-  // Set currentClassId immediately before loading data
+  isLoadingClass = true;
   currentClassId = classId;
+  clearTapSelection();
   
-  // Load data immediately for smooth transition
+  // Load data immediately for smooth transition (no blank flash since data is preserved)
   loadClassData(classId);
   renderAll();
   
@@ -231,17 +328,17 @@ function switchClass(classId) {
   loadSingleClass(classId);
   renderClassSelector();
   closeDropdown();
+  // isLoadingClass is released in loadSingleClass onValue callback
 }
 
 function loadClassData(classId) {
   const cls = classesData[classId];
   if (cls) {
-    currentClassData.students = cls.students || [];
-    currentClassData.schedule = cls.schedule || {};
-    currentClassData.weekHeaders = cls.weekHeaders || createNewWeekHeaders();
+    currentClassData.students = toArray(cls.students);
+    currentClassData.schedule = normalizeSchedule(cls.schedule);
+    currentClassData.weekHeaders = toArray(cls.weekHeaders).length ? toArray(cls.weekHeaders) : createNewWeekHeaders();
     currentClassData.notice = cls.notice || "Chưa có thông tin báo bài mới.";
     
-    // Update student input textarea (admin panel)
     const studentInput = document.getElementById("studentInput");
     if (studentInput) {
       studentInput.value = currentClassData.students.join("\n");
@@ -258,7 +355,6 @@ function saveCurrentClassId() {
   }
 }
 
-// Dropdown handlers
 function closeDropdown() {
   const btn = document.getElementById("classDropdownBtn");
   const menu = document.getElementById("classDropdownMenu");
@@ -290,8 +386,12 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Lọc HTML báo bài để chống XSS (giữ lại định dạng cơ bản)
+// ===========================================
+// SECURITY: XSS SANITIZATION
+// ===========================================
 function sanitizeNoticeHtml(html) {
+  if (typeof html !== "string") return "";
+  
   const allowedTags = new Set([
     "B", "STRONG", "I", "EM", "U", "S", "STRIKE", "H1", "H2", "H3", "H4",
     "P", "DIV", "BR", "UL", "OL", "LI", "BLOCKQUOTE", "SPAN", "FONT", "A",
@@ -301,7 +401,7 @@ function sanitizeNoticeHtml(html) {
   const allowedAttrs = new Set(["href", "target", "rel", "color", "face", "size"]);
 
   const tpl = document.createElement("template");
-  tpl.innerHTML = html;
+  tpl.innerHTML = html.trim();
 
   const clean = (parent) => {
     Array.from(parent.childNodes).forEach((node) => {
@@ -317,7 +417,6 @@ function sanitizeNoticeHtml(html) {
       }
 
       if (!allowedTags.has(node.tagName)) {
-        // Gỡ thẻ nhưng giữ nội dung bên trong
         const frag = document.createDocumentFragment();
         while (node.firstChild) frag.appendChild(node.firstChild);
         node.replaceWith(frag);
@@ -333,7 +432,7 @@ function sanitizeNoticeHtml(html) {
       });
 
       if (node.tagName === "A") {
-        const href = node.getAttribute("href") || "";
+        const href = (node.getAttribute("href") || "").trim();
         if (!/^(https?:|mailto:)/i.test(href)) {
           node.removeAttribute("href");
         } else {
@@ -350,20 +449,24 @@ function sanitizeNoticeHtml(html) {
   return tpl.innerHTML;
 }
 
+// ===========================================
+// FIREBASE SAVE FUNCTIONS
+// ===========================================
 function saveClassToFirebase(classId, data) {
-  if (!isAdmin) return;
+  if (!isAdmin || !currentClassId) return;
   const statusEl = document.getElementById("syncStatus");
   statusEl.textContent = "● Đang lưu...";
   statusEl.className = "sync-status syncing";
   
   const classRef = ref(db, `trucNhatLop/classes/${classId}`);
+  // Firebase rejects undefined values - provide fallbacks for every field
   set(classRef, {
-    name: data.name,
-    students: data.students,
-    schedule: data.schedule,
-    weekHeaders: data.weekHeaders,
-    notice: data.notice,
-    createdAt: data.createdAt
+    name: data.name || "",
+    students: Array.isArray(data.students) ? data.students : [],
+    schedule: (data.schedule && typeof data.schedule === "object") ? data.schedule : {},
+    weekHeaders: Array.isArray(data.weekHeaders) && data.weekHeaders.length ? data.weekHeaders : createNewWeekHeaders(),
+    notice: typeof data.notice === "string" && data.notice ? data.notice : "Chưa có thông tin báo bài mới.",
+    createdAt: data.createdAt || Date.now()
   }).then(() => {
     statusEl.textContent = "● Đã đồng bộ trực tuyến";
     statusEl.className = "sync-status";
@@ -377,7 +480,6 @@ function saveCurrentClassData() {
   if (!isAdmin || !currentClassId) return;
   const cls = classesData[currentClassId];
   if (cls) {
-    // Use currentClassData (full data) for saving, only update name from classesData
     const fullData = {
       name: cls.name,
       students: currentClassData.students,
@@ -408,22 +510,31 @@ function saveCellToCloud(cellKey) {
     });
 }
 
-function saveToCloud() {
-  if (!isAdmin || !currentClassId) return;
-  saveCurrentClassData();
-}
-
-window.loginWithGoogle = () => {
-  signInWithPopup(auth, provider).catch((error) => {
-    alert("Đăng nhập thất bại: " + error.message);
-  });
+// ===========================================
+// AUTH
+// ===========================================
+window.loginWithGoogle = async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    if (error.code === 'auth/popup-blocked' || 
+        error.code === 'auth/operation-not-supported-in-this-environment' ||
+        error.code === 'auth/unauthorized-domain') {
+      // Fallback to redirect for mobile browsers
+      await signInWithRedirect(auth, provider);
+    } else {
+      alert("Đăng nhập thất bại: " + error.message);
+    }
+  }
 };
 
 window.logoutAdmin = () => {
   signOut(auth);
 };
 
-// Email chủ web để nhận yêu cầu ủy quyền (Tạm thời chưa cấu hình)
+// Check for redirect result on page load
+getRedirectResult(auth).catch(() => {});
+
 const ADMIN_EMAIL = "";
 
 window.submitAdminRequest = () => {
@@ -449,19 +560,25 @@ window.submitAdminRequest = () => {
   }
 };
 
+// ===========================================
+// AUTH STATE
+// ===========================================
 onAuthStateChanged(auth, async (user) => {
+  const seq = ++authCheckSeq;
+  
   if (user) {
     try {
       currentUser = user;
-      const [dbAdminRes, coreAdminRes] = await Promise.allSettled([
-        get(ref(db, "admins/" + user.uid)),
-        get(ref(db, "coreAdminCheck"))
-      ]);
       
-      const isDbAdmin = dbAdminRes.status === "fulfilled" && dbAdminRes.value.exists() && dbAdminRes.value.val() === true;
-      const isCoreAdmin = coreAdminRes.status === "fulfilled" && coreAdminRes.value.exists() && coreAdminRes.value.val() === true;
+      // Only check admins/${user.uid} - no coreAdminCheck vulnerability
+      const dbAdminRes = await get(ref(db, "admins/" + user.uid));
       
-      if (isDbAdmin || isCoreAdmin) {
+      // Check if this is still the latest auth check
+      if (seq !== authCheckSeq) return;
+      
+      const isDbAdmin = dbAdminRes.exists() && dbAdminRes.val() === true;
+      
+      if (isDbAdmin) {
         isAdmin = true;
         const adminPanel = document.getElementById("adminPanel");
         if (adminPanel) {
@@ -485,7 +602,6 @@ onAuthStateChanged(auth, async (user) => {
         roleBadge.textContent = "Admin: " + user.email;
         roleBadge.className = "role-badge admin";
         
-        // Show admin notice elements
         const saveNoticeBtn = document.getElementById("saveNoticeBtn");
         const noticeInput = document.getElementById("noticeInput");
         const noticeDisplay = document.getElementById("noticeDisplay");
@@ -495,10 +611,7 @@ onAuthStateChanged(auth, async (user) => {
           noticeDisplay.classList.add("hidden");
         }
         
-        // Show class selector immediately
         renderClassSelector();
-        
-        // Load classes from Firebase
         loadClassesFromFirebase();
       } else {
         isAdmin = false;
@@ -506,12 +619,13 @@ onAuthStateChanged(auth, async (user) => {
         signOut(auth);
       }
     } catch (error) {
+      if (seq !== authCheckSeq) return;
       isAdmin = false;
       alert("Lỗi kết nối khi kiểm tra quyền Admin!");
       signOut(auth);
     }
   } else {
-    // Cleanup listener khi logout
+    // Cleanup
     if (currentClassListener) {
       currentClassListener();
       currentClassListener = null;
@@ -558,51 +672,55 @@ onAuthStateChanged(auth, async (user) => {
       noticeDisplay.classList.remove("hidden");
     }
     
-    // Load classes for guests too (read-only)
     loadClassesFromFirebase();
-    
     renderAll();
   }
 });
 
-// Initial render for immediate UI (before auth resolves)
 renderAll();
 
+// ===========================================
+// LOAD CLASSES
+// ===========================================
 function loadClassesFromFirebase() {
-  // Cleanup old classes list listener
   if (classesListListener) {
     classesListListener();
     classesListListener = null;
   }
   
-  // 1. Chỉ load metadata (name, createdAt) - nhẹ, nhanh
   const classesMetaRef = query(classesRef, orderByChild('createdAt'));
   
   classesListListener = onValue(classesMetaRef, (snapshot) => {
     const val = snapshot.val();
     if (val) {
-      // Giữ lại dữ liệu students/schedule/weekHeaders/notice của các lớp đã load
-      // Chỉ cập nhật name, createdAt từ metadata
+      // Preserve detailed data - prefer freshly loaded snapshot data, fall back to existing
       const nextClasses = {};
       Object.entries(val).forEach(([id, data]) => {
+        const existing = classesData[id] || {};
+        const students = toArray(data.students);
+        const schedule = normalizeSchedule(data.schedule);
+        const weekHeaders = toArray(data.weekHeaders).length ? toArray(data.weekHeaders) : (existing.weekHeaders || []);
+        const notice = (typeof data.notice === "string") ? data.notice : "Chưa có thông tin báo bài mới.";
+        
         nextClasses[id] = {
-          ...(classesData[id] || {}),
-          name: data.name,
-          createdAt: data.createdAt,
-          studentsCount: Array.isArray(data.students) ? data.students.length : 0,
-          assignedCount: data.schedule ? Object.keys(data.schedule).length : 0
+          name: data.name || existing.name || "",
+          createdAt: data.createdAt || existing.createdAt || Date.now(),
+          students: students,
+          schedule: schedule,
+          weekHeaders: weekHeaders,
+          notice: notice,
+          studentsCount: students.length,
+          assignedCount: Object.values(schedule).filter(arr => toArray(arr).length > 0).length
         };
       });
       classesData = nextClasses;
       
-      // Cập nhật trạng thái kết nối thành công
       const statusEl = document.getElementById("syncStatus");
       if (statusEl) {
         statusEl.textContent = "● Đã đồng bộ trực tuyến";
         statusEl.className = "sync-status";
       }
       
-      // 2. Load currentClassId song song
       get(currentClassRef).then((snap) => {
         const savedLocalId = localStorage.getItem("selectedClassId");
         let targetId = null;
@@ -615,9 +733,7 @@ function loadClassesFromFirebase() {
           targetId = Object.keys(classesData)[0] || null;
         }
 
-        // For admin: don't overwrite currentClassId if already has valid class
         if (isAdmin && currentClassId && classesData[currentClassId]) {
-          // Keep current class, just refresh selector
           renderClassSelector();
           renderClassList();
         } else if (targetId && targetId !== currentClassId) {
@@ -644,9 +760,7 @@ function loadClassesFromFirebase() {
   });
 }
 
-// Load full data cho 1 lớp duy nhất (realtime)
 function loadSingleClass(classId) {
-  // Cleanup listener cũ
   if (currentClassListener) {
     currentClassListener();
   }
@@ -655,23 +769,47 @@ function loadSingleClass(classId) {
   currentClassListener = onValue(classRef, (snapshot) => {
     const val = snapshot.val();
     if (val && classesData[classId]) {
-      // Merge metadata + full data
-      classesData[classId] = { ...classesData[classId], ...val };
+      // Normalize fields explicitly so deleted empty branches ({}/[]) don't
+      // resurrect stale data from the previous classesData entry.
+      const normalizedStudents = toArray(val.students);
+      const normalizedSched = normalizeSchedule(val.schedule);
+      classesData[classId] = {
+        ...classesData[classId],
+        ...val,
+        students: normalizedStudents,
+        schedule: normalizedSched,
+        weekHeaders: toArray(val.weekHeaders).length ? toArray(val.weekHeaders) : createNewWeekHeaders(),
+        notice: typeof val.notice === "string" ? val.notice : "Chưa có thông tin báo bài mới.",
+        studentsCount: normalizedStudents.length,
+        assignedCount: Object.values(normalizedSched).filter(arr => toArray(arr).length > 0).length
+      };
       loadClassData(classId);
       renderAll();
     }
+    // Release the switch lock now that realtime data has arrived
+    isLoadingClass = false;
   }, (error) => {
+    isLoadingClass = false;
     const statusEl = document.getElementById("syncStatus");
     statusEl.textContent = "● Lỗi tải lớp: " + error.message;
     statusEl.className = "sync-status error";
   });
 }
 
-// Class Management Modal
-let modalMode = null; // 'add' | 'rename'
+// ===========================================
+// CLASS MANAGEMENT MODAL
+// ===========================================
+let modalMode = null;
 let modalTargetClassId = null;
+let modalTimeoutId = null;
 
 function openClassModal(mode, classId = null) {
+  // Clear any pending timeout from closeClassModal
+  if (modalTimeoutId) {
+    clearTimeout(modalTimeoutId);
+    modalTimeoutId = null;
+  }
+  
   const modal = document.getElementById("classModal");
   const title = document.getElementById("classModalTitle");
   const newNameInput = document.getElementById("newClassNameInput");
@@ -682,7 +820,6 @@ function openClassModal(mode, classId = null) {
   modalMode = mode;
   modalTargetClassId = classId;
   
-  // Reset both inputs
   newNameInput.value = "";
   renameInput.value = "";
   
@@ -699,15 +836,17 @@ function openClassModal(mode, classId = null) {
     renameInput.value = classesData[classId].name;
     renameInput.placeholder = "Nhập tên mới";
     confirmBtn.textContent = "Lưu thay đổi";
+  } else if (mode === "manage") {
+    title.textContent = "Quản lý lớp học";
+    newNameInput.closest(".form-group").style.display = "none";
+    renameGroup.style.display = "none";
+    confirmBtn.textContent = "Đóng";
   }
   
-  // Show modal first, then focus for proper input
   modal.hidden = false;
-  // Force reflow for animation
   modal.offsetHeight;
   modal.classList.add("visible");
   
-  // Focus after modal is visible
   if (mode === "add") {
     newNameInput.focus();
   } else if (mode === "rename" && classId && classesData[classId]) {
@@ -718,8 +857,9 @@ function openClassModal(mode, classId = null) {
 function closeClassModal() {
   const modal = document.getElementById("classModal");
   modal.classList.remove("visible");
-  setTimeout(() => {
+  modalTimeoutId = setTimeout(() => {
     modal.hidden = true;
+    modalTimeoutId = null;
   }, 200);
   modalMode = null;
   modalTargetClassId = null;
@@ -750,17 +890,15 @@ function confirmClassModal() {
 function addNewClass(name) {
   if (!isAdmin) return;
   
-  // Clone current class data
   const newClassData = {
     name: name,
-    students: [...currentClassData.students],
-    schedule: JSON.parse(JSON.stringify(currentClassData.schedule)),
-    weekHeaders: [...currentClassData.weekHeaders],
+    students: [...toArray(currentClassData.students)],
+    schedule: JSON.parse(JSON.stringify(normalizeSchedule(currentClassData.schedule))),
+    weekHeaders: [...toArray(currentClassData.weekHeaders)],
     notice: currentClassData.notice,
     createdAt: Date.now()
   };
   
-  // Push to Firebase to get new ID
   const newClassRef = push(classesRef);
   const newClassId = newClassRef.key;
   
@@ -837,7 +975,9 @@ function renderClassList() {
   classIds.forEach(id => {
     const cls = classesData[id];
     const totalStudents = Array.isArray(cls.students) ? cls.students.length : (cls.studentsCount || 0);
-    const totalAssigned = cls.schedule ? Object.keys(cls.schedule).length : (cls.assignedCount || 0);
+    const totalAssigned = cls.schedule
+      ? Object.values(cls.schedule).filter(arr => toArray(arr).length > 0).length
+      : (cls.assignedCount || 0);
     const item = document.createElement("div");
     item.className = `class-list-item ${id === currentClassId ? "current" : ""}`;
     item.innerHTML = `
@@ -864,7 +1004,6 @@ function renderClassList() {
     container.appendChild(item);
   });
   
-  // Add event listeners
   container.querySelectorAll("[data-action]").forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
@@ -882,6 +1021,9 @@ function renderClassList() {
   });
 }
 
+// ===========================================
+// ADMIN ACTIONS
+// ===========================================
 window.updateStudentList = () => {
   if (!isAdmin) return;
   if (!currentClassId) {
@@ -972,13 +1114,19 @@ window.startNewCycle = () => {
 };
 
 window.removeStudentFromCell = (cellKey, studentIndex) => {
-  if (!isAdmin || !currentClassId || !currentClassData.schedule[cellKey]) return;
-  currentClassData.schedule[cellKey].splice(studentIndex, 1);
+  if (!isAdmin || !currentClassId) return;
+  if (!currentClassData.schedule[cellKey]) return;
+  const arr = toArray(currentClassData.schedule[cellKey]);
+  arr.splice(studentIndex, 1);
+  currentClassData.schedule[cellKey] = arr;
   classesData[currentClassId].schedule = currentClassData.schedule;
   renderAll();
   saveCellToCloud(cellKey);
 };
 
+// ===========================================
+// RENDER SCHEDULE
+// ===========================================
 function renderSchedule() {
   const tbody = document.getElementById("scheduleBody");
   const trHeader = document.getElementById("tableHeader");
@@ -987,7 +1135,8 @@ function renderSchedule() {
     trHeader.removeChild(trHeader.lastChild);
   }
 
-  currentClassData.weekHeaders.forEach(weekStr => {
+  const headers = toArray(currentClassData.weekHeaders);
+  headers.forEach(weekStr => {
     const th = document.createElement("th");
     th.className = "border border-slate-200 p-3 text-center";
     th.textContent = weekStr;
@@ -1013,6 +1162,12 @@ function renderSchedule() {
       const td = document.createElement("td");
       td.className = "cell border border-slate-200 p-2 align-top min-h-[72px] transition";
       td.setAttribute("role", "gridcell");
+      td.dataset.cellKey = cellKey;
+      
+      // Highlight cells as tap-ready when a student is selected for mobile tap-to-assign
+      if (isAdmin && tapSelectedStudent) {
+        td.classList.add('tap-ready');
+      }
 
       if (isAdmin) {
         td.ondragover = (e) => { e.preventDefault(); td.classList.add("drag-over"); };
@@ -1020,6 +1175,7 @@ function renderSchedule() {
         td.ondrop = (e) => {
           e.preventDefault();
           td.classList.remove("drag-over");
+          if (!isAdmin || !currentClassId) return;
 
           let payload;
           try {
@@ -1031,19 +1187,42 @@ function renderSchedule() {
           if (!payload || !payload.name) return;
         
           if (payload.fromCell !== null && currentClassData.schedule[payload.fromCell]) {
-            currentClassData.schedule[payload.fromCell].splice(payload.fromIdx, 1);
+            const fromArr = toArray(currentClassData.schedule[payload.fromCell]);
+            fromArr.splice(payload.fromIdx, 1);
+            currentClassData.schedule[payload.fromCell] = fromArr;
             saveCellToCloud(payload.fromCell);
           }
           if (!currentClassData.schedule[cellKey]) currentClassData.schedule[cellKey] = [];
-          currentClassData.schedule[cellKey].push(payload.name);
+          const toArr = toArray(currentClassData.schedule[cellKey]);
+          toArr.push(payload.name);
+          currentClassData.schedule[cellKey] = toArr;
           classesData[currentClassId].schedule = currentClassData.schedule;
 
           renderAll();
           saveCellToCloud(cellKey);
         };
+        
+        // Tap-to-assign: tap a cell to assign the currently selected student
+        td.onclick = (e) => {
+          if (!isAdmin || !currentClassId) return;
+          if (e.target.closest('.assigned-tag') || e.target.closest('.tag-remove')) return;
+          if (!tapSelectedStudent) return;
+          
+          const studentName = tapSelectedStudent;
+          
+          if (!currentClassData.schedule[cellKey]) currentClassData.schedule[cellKey] = [];
+          const arr = toArray(currentClassData.schedule[cellKey]);
+          arr.push(studentName);
+          currentClassData.schedule[cellKey] = arr;
+          classesData[currentClassId].schedule = currentClassData.schedule;
+          
+          renderAll();
+          saveCellToCloud(cellKey);
+          // Note: tapSelectedStudent is preserved so Admin can assign same student to multiple cells
+        };
       }
 
-      const assigned = currentClassData.schedule[cellKey] || [];
+      const assigned = toArray(currentClassData.schedule[cellKey] || []);
       const wrap = document.createElement("div");
       wrap.className = "cell-content";
 
@@ -1090,6 +1269,9 @@ function renderSchedule() {
   });
 }
 
+// ===========================================
+// RENDER NOTICE
+// ===========================================
 function renderNotice() {
   const noticeDisplay = document.getElementById("noticeDisplay");
   const noticeInput = document.getElementById("noticeInput");
@@ -1126,7 +1308,7 @@ function renderNotice() {
 }
 
 // ===========================================
-// NAVIGATION & SCROLL ANIMATIONS
+// NAVIGATION
 // ===========================================
 let currentTab = 'home';
 
@@ -1144,9 +1326,7 @@ function switchTab(tabName) {
     panel.classList.toggle('active', isActive);
     panel.hidden = !isActive;
     if (isActive) {
-      panel.setAttribute('tabindex', '0');
-      panel.focus({ preventScroll: true });
-    } else {
+      // Remove tabindex to avoid focus outline on section
       panel.removeAttribute('tabindex');
     }
   });
@@ -1171,10 +1351,11 @@ document.querySelector('.nav-brand').addEventListener('click', (e) => {
   switchTab('home');
 });
 
-// Class selector dropdown events
+// ===========================================
+// DROPDOWN EVENTS
+// ===========================================
 document.addEventListener('DOMContentLoaded', () => {
   const dropdownBtn = document.getElementById("classDropdownBtn");
-  const dropdownMenu = document.getElementById("classDropdownMenu");
   const addClassBtn = document.getElementById("addClassBtn");
   const manageClassesBtn = document.getElementById("manageClassesBtn");
   const modal = document.getElementById("classModal");
@@ -1201,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', () => {
     manageClassesBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       closeDropdown();
-      openClassModal("add");
+      openClassModal("manage");
     });
   }
   
@@ -1209,13 +1390,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (modalCancel) modalCancel.addEventListener('click', closeClassModal);
   if (modalConfirm) modalConfirm.addEventListener('click', confirmClassModal);
   
+  // Enter key confirms modal input
+  const newClassNameInputEl = document.getElementById("newClassNameInput");
+  const renameClassInputEl = document.getElementById("renameClassInput");
+  [newClassNameInputEl, renameClassInputEl].forEach(input => {
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          confirmClassModal();
+        }
+      });
+    }
+  });
+  
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) closeClassModal();
     });
   }
   
-  // Close dropdown on outside click
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById("classSelector");
     const menu = document.getElementById("classDropdownMenu");
@@ -1225,16 +1419,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Escape key to close modal/dropdown
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeClassModal();
       closeDropdown();
+      clearTapSelection();
     }
   });
 });
 
-// Admin panel toggle (outside keydown)
+// ===========================================
+// ADMIN PANEL TOGGLE
+// ===========================================
 const adminPanelToggle = document.getElementById("adminPanelToggle");
 const adminPanel = document.getElementById("adminPanel");
 const adminPanelOpenBtn = document.getElementById("adminPanelOpenBtn");
@@ -1262,9 +1458,10 @@ if (adminPanelOpenBtn && adminPanel) {
   });
 }
 
-// Admin Panel event listeners
+// ===========================================
+// ADMIN PANEL TABS
+// ===========================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Admin panel tabs
   const adminTabs = document.querySelectorAll('.admin-panel-tab');
   const adminTabPanels = document.querySelectorAll('.admin-tabpanel');
   
@@ -1272,21 +1469,18 @@ document.addEventListener('DOMContentLoaded', () => {
     tab.addEventListener('click', () => {
       const targetTab = tab.dataset.adminTab;
       
-      // Update tabs
       adminTabs.forEach(t => {
         const isActive = t.dataset.adminTab === targetTab;
         t.classList.toggle('active', isActive);
         t.setAttribute('aria-selected', isActive);
       });
       
-      // Update panels
       adminTabPanels.forEach(panel => {
         const isActive = panel.id === `admin-tab-${targetTab}`;
         panel.classList.toggle('active', isActive);
         panel.hidden = !isActive;
       });
       
-      // Refresh drag list when switching to dragdrop tab
       if (targetTab === 'dragdrop') {
         updateStudentDragList();
       }
@@ -1295,7 +1489,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===========================================
-// RICH TEXT EDITOR TOOLBAR
+// RICH TEXT EDITOR
 // ===========================================
 function initNoticeToolbar() {
   const toolbar = document.getElementById('noticeToolbar');
@@ -1306,18 +1500,44 @@ function initNoticeToolbar() {
   
   if (!toolbar || !editor) return;
   
-  // Ensure execCommand creates <font> tags compatible with sanitizer
   try { document.execCommand('styleWithCSS', false, false); } catch (e) {}
+  
+  // Save selection before interacting with toolbar
+  let savedSelection = null;
+  
+  function saveSelection() {
+    const sel = window.getSelection();
+    if (sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      // Only save selection if it's inside the notice editor
+      if (editor.contains(range.commonAncestorContainer)) {
+        savedSelection = range.cloneRange();
+      }
+    }
+  }
+  
+  function restoreSelection() {
+    if (savedSelection) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedSelection);
+    }
+  }
+  
+  // Save selection on mouseup in editor
+  editor.addEventListener('mouseup', saveSelection);
+  editor.addEventListener('keyup', saveSelection);
   
   // Format buttons
   toolbar.querySelectorAll('.toolbar-btn[data-format]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
+      restoreSelection();
+      
       const format = btn.dataset.format;
       const value = btn.dataset.value || null;
       
       if (format === 'heading') {
-        // Toggle heading: if already H2, revert to div
         const currentFormat = document.queryCommandValue('formatBlock').toLowerCase();
         if (currentFormat === 'h2') {
           document.execCommand('formatBlock', false, 'div');
@@ -1325,7 +1545,6 @@ function initNoticeToolbar() {
           document.execCommand('formatBlock', false, 'h2');
         }
       } else if (format === 'blockquote') {
-        // Toggle blockquote: if already blockquote, revert to div
         const currentFormat = document.queryCommandValue('formatBlock').toLowerCase();
         if (currentFormat === 'blockquote') {
           document.execCommand('formatBlock', false, 'div');
@@ -1339,16 +1558,16 @@ function initNoticeToolbar() {
         document.execCommand(format, false, value);
       }
       
-      // Update active state
-      btn.classList.toggle('active', document.queryCommandState(format));
-      
+      updateToolbarState();
       editor.focus();
     });
   });
   
-  // Font family select
+  // Font family select - preserve selection
   if (fontFamilySelect) {
+    fontFamilySelect.addEventListener('mousedown', saveSelection);
     fontFamilySelect.addEventListener('change', () => {
+      restoreSelection();
       const value = fontFamilySelect.value;
       if (value) {
         document.execCommand('fontName', false, value);
@@ -1358,9 +1577,11 @@ function initNoticeToolbar() {
     });
   }
   
-  // Font size select - use execCommand, keep <font size> for sanitizer compatibility
+  // Font size select
   if (fontSizeSelect) {
+    fontSizeSelect.addEventListener('mousedown', saveSelection);
     fontSizeSelect.addEventListener('change', () => {
+      restoreSelection();
       const value = fontSizeSelect.value;
       if (value) {
         const sizeMap = {
@@ -1375,7 +1596,9 @@ function initNoticeToolbar() {
   
   // Text color select
   if (textColorSelect) {
+    textColorSelect.addEventListener('mousedown', saveSelection);
     textColorSelect.addEventListener('change', () => {
+      restoreSelection();
       const value = textColorSelect.value;
       if (value) {
         document.execCommand('foreColor', false, value);
@@ -1392,51 +1615,51 @@ function initNoticeToolbar() {
         case 'b':
           e.preventDefault();
           document.execCommand('bold', false, null);
+          updateToolbarState();
           break;
         case 'i':
           e.preventDefault();
           document.execCommand('italic', false, null);
+          updateToolbarState();
           break;
         case 'u':
           e.preventDefault();
           document.execCommand('underline', false, null);
+          updateToolbarState();
           break;
       }
     }
   });
   
-  // Update button states on selection change
-  editor.addEventListener('input', () => {
-    updateToolbarState();
-  });
-  
-  editor.addEventListener('keyup', () => {
-    updateToolbarState();
-  });
-  
-  editor.addEventListener('click', () => {
-    updateToolbarState();
-  });
+  editor.addEventListener('input', updateToolbarState);
+  editor.addEventListener('keyup', updateToolbarState);
+  editor.addEventListener('click', updateToolbarState);
   
   function updateToolbarState() {
     toolbar.querySelectorAll('.toolbar-btn[data-format]').forEach(btn => {
       const format = btn.dataset.format;
-      if (format === 'heading' || format === 'removeFormat') return;
-      btn.classList.toggle('active', document.queryCommandState(format));
+      if (format === 'removeFormat') return;
+      
+      let isActive = false;
+      if (format === 'heading') {
+        isActive = document.queryCommandValue('formatBlock').toLowerCase() === 'h2';
+      } else if (format === 'blockquote') {
+        isActive = document.queryCommandValue('formatBlock').toLowerCase() === 'blockquote';
+      } else {
+        isActive = document.queryCommandState(format);
+      }
+      
+      btn.classList.toggle('active', isActive);
     });
   }
-  
-  // Placeholder is handled by CSS :empty:before pseudo-element
-  // No JS placeholder handling needed - it was causing placeholder to be saved as real data
 }
 
-// Initialize toolbar on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
   initNoticeToolbar();
 });
 
 // ===========================================
-// SCROLL PROGRESS & NAV SHADOW
+// SCROLL UI
 // ===========================================
 const topNav = document.getElementById('topNav');
 const scrollProgress = document.getElementById('scrollProgress');
@@ -1477,7 +1700,7 @@ backToTop?.addEventListener('click', () => {
 });
 
 // ===========================================
-// SCROLL REVEAL (IntersectionObserver)
+// SCROLL REVEAL
 // ===========================================
 const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
