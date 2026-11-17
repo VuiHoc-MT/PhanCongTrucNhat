@@ -63,7 +63,8 @@ let currentClassData = {
   weekHeaders: weekHeaders,
   notice: "Chưa có thông tin báo bài mới."
 };
-let currentClassListener = null; // Track active listener for cleanup
+let currentClassListener = null; // Track active listener for current class
+let classesListListener = null; // Track active listener for classes list
 
 function getDefaultClassData() {
   return {
@@ -81,6 +82,7 @@ function renderAll() {
   renderSchedule();
   renderNotice();
   updateStudentPool();
+  updateStudentDragList();
   updateStudentCount();
 }
 
@@ -102,6 +104,48 @@ function updateStudentPool() {
       pool.appendChild(chip);
     });
   }
+}
+
+// Cập nhật danh sách kéo thả trong admin panel (có hiển thị số lượt đã dùng)
+function updateStudentDragList() {
+  const list = document.getElementById("studentDragList");
+  if (!list) return;
+  
+  // Tính số lượt mỗi học sinh được phân công
+  const usageCount = {};
+  if (currentClassData.schedule) {
+    Object.values(currentClassData.schedule).forEach(arr => {
+      arr.forEach(name => {
+        usageCount[name] = (usageCount[name] || 0) + 1;
+      });
+    });
+  }
+  
+  list.innerHTML = "";
+  currentClassData.students.forEach((name, idx) => {
+    const count = usageCount[name] || 0;
+    const item = document.createElement("div");
+    item.className = "student-drag-item";
+    item.setAttribute("role", "listitem");
+    item.draggable = isAdmin;
+    item.dataset.studentIndex = idx;
+    item.dataset.studentName = name;
+    item.innerHTML = `
+      <span class="student-drag-handle" aria-label="Kéo học sinh ${escapeHtml(name)}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </span>
+      <span class="student-drag-name">${escapeHtml(name)}</span>
+      <span class="student-drag-count" aria-label="${count} lượt trực">${count}</span>
+    `;
+    
+    item.ondragstart = (e) => {
+      e.dataTransfer.setData("text/plain", JSON.stringify({ name, fromCell: null, fromIdx: null }));
+      item.classList.add("dragging");
+    };
+    item.ondragend = () => item.classList.remove("dragging");
+    
+    list.appendChild(item);
+  });
 }
 
 function updateStudentCount() {
@@ -176,7 +220,13 @@ function switchClass(classId) {
     return;
   }
   
+  // Set currentClassId immediately before loading data
   currentClassId = classId;
+  
+  // Load data immediately for smooth transition
+  loadClassData(classId);
+  renderAll();
+  
   saveCurrentClassId();
   loadSingleClass(classId);
   renderClassSelector();
@@ -201,7 +251,10 @@ function loadClassData(classId) {
 
 function saveCurrentClassId() {
   if (currentClassId) {
-    set(currentClassRef, currentClassId).catch(() => {});
+    localStorage.setItem("selectedClassId", currentClassId);
+    if (isAdmin) {
+      set(currentClassRef, currentClassId).catch(() => {});
+    }
   }
 }
 
@@ -245,7 +298,7 @@ function sanitizeNoticeHtml(html) {
     "CODE", "PRE", "HR"
   ]);
   const dropTags = new Set(["SCRIPT", "IFRAME", "STYLE", "OBJECT", "EMBED", "LINK", "META"]);
-  const allowedAttrs = new Set(["style", "href", "target", "rel", "color", "face", "size"]);
+  const allowedAttrs = new Set(["href", "target", "rel", "color", "face", "size"]);
 
   const tpl = document.createElement("template");
   tpl.innerHTML = html;
@@ -276,9 +329,6 @@ function sanitizeNoticeHtml(html) {
         if (name.startsWith("on") || !allowedAttrs.has(name)) {
           node.removeAttribute(attr.name);
           return;
-        }
-        if (name === "style" && /url\s*\(|expression|javascript:/i.test(attr.value)) {
-          node.removeAttribute(attr.name);
         }
       });
 
@@ -405,19 +455,32 @@ onAuthStateChanged(auth, async (user) => {
       currentUser = user;
       const [dbAdminRes, coreAdminRes] = await Promise.allSettled([
         get(ref(db, "admins/" + user.uid)),
-        get(ref(db, "coreAdmins/" + user.uid))
+        get(ref(db, "coreAdminCheck"))
       ]);
       
       const isDbAdmin = dbAdminRes.status === "fulfilled" && dbAdminRes.value.exists() && dbAdminRes.value.val() === true;
-      const isCoreAdmin = coreAdminRes.status === "fulfilled";
+      const isCoreAdmin = coreAdminRes.status === "fulfilled" && coreAdminRes.value.exists() && coreAdminRes.value.val() === true;
       
       if (isDbAdmin || isCoreAdmin) {
         isAdmin = true;
-        document.getElementById("adminSidebar").classList.remove("hidden");
+        const adminPanel = document.getElementById("adminPanel");
+        if (adminPanel) {
+          adminPanel.hidden = false;
+          adminPanel.classList.add("is-open");
+          adminPanel.inert = false;
+        }
+        const adminPanelToggle = document.getElementById("adminPanelToggle");
+        const adminPanelOpenBtn = document.getElementById("adminPanelOpenBtn");
+        if (adminPanelToggle) {
+          adminPanelToggle.setAttribute("aria-expanded", "true");
+          adminPanelToggle.setAttribute("aria-label", "Đóng bảng điều khiển");
+        }
+        if (adminPanelOpenBtn) {
+          adminPanelOpenBtn.classList.remove("hidden");
+        }
         document.getElementById("adminToolbar").classList.remove("hidden");
         document.getElementById("logoutBtn").classList.remove("hidden");
         document.getElementById("loginBtn").classList.add("hidden");
-        document.getElementById("mainLayout").classList.remove("layout-grid--guest");
         const roleBadge = document.getElementById("roleBadge");
         roleBadge.textContent = "Admin: " + user.email;
         roleBadge.className = "role-badge admin";
@@ -453,6 +516,10 @@ onAuthStateChanged(auth, async (user) => {
       currentClassListener();
       currentClassListener = null;
     }
+    if (classesListListener) {
+      classesListListener();
+      classesListListener = null;
+    }
     
     currentUser = null;
     isAdmin = false;
@@ -460,11 +527,24 @@ onAuthStateChanged(auth, async (user) => {
     currentClassId = null;
     currentClassData = getDefaultClassData();
     
-    document.getElementById("adminSidebar").classList.add("hidden");
+    const adminPanel = document.getElementById("adminPanel");
+    if (adminPanel) {
+      adminPanel.classList.remove("is-open");
+      adminPanel.hidden = true;
+      adminPanel.inert = true;
+    }
+    const adminPanelToggle = document.getElementById("adminPanelToggle");
+    const adminPanelOpenBtn = document.getElementById("adminPanelOpenBtn");
+    if (adminPanelToggle) {
+      adminPanelToggle.setAttribute("aria-expanded", "false");
+      adminPanelToggle.setAttribute("aria-label", "Mở bảng điều khiển");
+    }
+    if (adminPanelOpenBtn) {
+      adminPanelOpenBtn.classList.add("hidden");
+    }
     document.getElementById("adminToolbar").classList.add("hidden");
     document.getElementById("logoutBtn").classList.add("hidden");
     document.getElementById("loginBtn").classList.remove("hidden");
-    document.getElementById("mainLayout").classList.add("layout-grid--guest");
     const roleBadge = document.getElementById("roleBadge");
     roleBadge.textContent = "Chế độ: Khách (Chỉ xem)";
     roleBadge.className = "role-badge guest";
@@ -489,34 +569,66 @@ onAuthStateChanged(auth, async (user) => {
 renderAll();
 
 function loadClassesFromFirebase() {
+  // Cleanup old classes list listener
+  if (classesListListener) {
+    classesListListener();
+    classesListListener = null;
+  }
+  
   // 1. Chỉ load metadata (name, createdAt) - nhẹ, nhanh
   const classesMetaRef = query(classesRef, orderByChild('createdAt'));
   
-  onValue(classesMetaRef, (snapshot) => {
+  classesListListener = onValue(classesMetaRef, (snapshot) => {
     const val = snapshot.val();
     if (val) {
-      // Chỉ lưu metadata để hiển thị dropdown
-      classesData = {};
+      // Giữ lại dữ liệu students/schedule/weekHeaders/notice của các lớp đã load
+      // Chỉ cập nhật name, createdAt từ metadata
+      const nextClasses = {};
       Object.entries(val).forEach(([id, data]) => {
-        classesData[id] = { 
-          name: data.name, 
-          createdAt: data.createdAt 
+        nextClasses[id] = {
+          ...(classesData[id] || {}),
+          name: data.name,
+          createdAt: data.createdAt,
+          studentsCount: Array.isArray(data.students) ? data.students.length : 0,
+          assignedCount: data.schedule ? Object.keys(data.schedule).length : 0
         };
       });
+      classesData = nextClasses;
+      
+      // Cập nhật trạng thái kết nối thành công
+      const statusEl = document.getElementById("syncStatus");
+      if (statusEl) {
+        statusEl.textContent = "● Đã đồng bộ trực tuyến";
+        statusEl.className = "sync-status";
+      }
       
       // 2. Load currentClassId song song
       get(currentClassRef).then((snap) => {
-        if (snap.exists() && classesData[snap.val()]) {
-          currentClassId = snap.val();
+        const savedLocalId = localStorage.getItem("selectedClassId");
+        let targetId = null;
+
+        if (!isAdmin && savedLocalId && classesData[savedLocalId]) {
+          targetId = savedLocalId;
+        } else if (snap.exists() && classesData[snap.val()]) {
+          targetId = snap.val();
         } else {
-          currentClassId = Object.keys(classesData)[0] || null;
+          targetId = Object.keys(classesData)[0] || null;
         }
-        
-        // 3. Chỉ load FULL data của lớp hiện tại
-        if (currentClassId) {
+
+        // For admin: don't overwrite currentClassId if already has valid class
+        if (isAdmin && currentClassId && classesData[currentClassId]) {
+          // Keep current class, just refresh selector
+          renderClassSelector();
+          renderClassList();
+        } else if (targetId && targetId !== currentClassId) {
+          currentClassId = targetId;
           loadSingleClass(currentClassId);
-        } else {
+        } else if (!targetId) {
+          currentClassId = null;
           renderAll();
+        } else {
+          renderClassSelector();
+          renderClassList();
         }
       });
     } else {
@@ -570,26 +682,37 @@ function openClassModal(mode, classId = null) {
   modalMode = mode;
   modalTargetClassId = classId;
   
+  // Reset both inputs
+  newNameInput.value = "";
+  renameInput.value = "";
+  
   if (mode === "add") {
     title.textContent = "Thêm lớp mới (nhân bản)";
-    newNameInput.value = "";
     newNameInput.placeholder = "VD: 12A1, 11B2...";
+    newNameInput.closest(".form-group").style.display = "block";
     renameGroup.style.display = "none";
     confirmBtn.textContent = "Tạo lớp";
   } else if (mode === "rename" && classId && classesData[classId]) {
     title.textContent = "Đổi tên lớp";
-    newNameInput.value = "";
+    newNameInput.closest(".form-group").style.display = "none";
     renameGroup.style.display = "block";
     renameInput.value = classesData[classId].name;
     renameInput.placeholder = "Nhập tên mới";
     confirmBtn.textContent = "Lưu thay đổi";
   }
   
+  // Show modal first, then focus for proper input
   modal.hidden = false;
   // Force reflow for animation
   modal.offsetHeight;
   modal.classList.add("visible");
-  newNameInput.focus();
+  
+  // Focus after modal is visible
+  if (mode === "add") {
+    newNameInput.focus();
+  } else if (mode === "rename" && classId && classesData[classId]) {
+    renameInput.focus();
+  }
 }
 
 function closeClassModal() {
@@ -644,9 +767,8 @@ function addNewClass(name) {
   set(newClassRef, newClassData).then(() => {
     classesData[newClassId] = newClassData;
     currentClassId = newClassId;
-    loadClassData(newClassId);
     saveCurrentClassId();
-    renderAll();
+    loadSingleClass(newClassId);
   }).catch(() => {
     alert("Không thể tạo lớp mới!");
   });
@@ -655,25 +777,17 @@ function addNewClass(name) {
 function renameClass(classId, newName) {
   if (!isAdmin || !classesData[classId]) return;
   
-  const cls = classesData[classId];
-  // Get full data for saving - use currentClassData if it's the current class
-  const fullData = {
-    name: newName,
-    students: (classId === currentClassId) ? currentClassData.students : (cls.students || []),
-    schedule: (classId === currentClassId) ? currentClassData.schedule : (cls.schedule || {}),
-    weekHeaders: (classId === currentClassId) ? currentClassData.weekHeaders : (cls.weekHeaders || []),
-    notice: (classId === currentClassId) ? currentClassData.notice : (cls.notice || ""),
-    createdAt: cls.createdAt
-  };
-  
   classesData[classId].name = newName;
-  saveClassToFirebase(classId, fullData);
-  
-  if (classId === currentClassId) {
-    renderAll();
-  } else {
-    renderClassSelector();
-  }
+  update(ref(db, `trucNhatLop/classes/${classId}`), { name: newName })
+    .then(() => {
+      renderClassSelector();
+      if (classId === currentClassId) {
+        renderAll();
+      }
+    })
+    .catch(() => {
+      alert("Không thể đổi tên lớp!");
+    });
 }
 
 function deleteClass(classId) {
@@ -693,6 +807,8 @@ function deleteClass(classId) {
       } else {
         currentClassId = null;
         currentClassData = getDefaultClassData();
+        localStorage.removeItem("selectedClassId");
+        remove(currentClassRef).catch(() => {});
       }
       saveCurrentClassId();
     }
@@ -720,6 +836,8 @@ function renderClassList() {
   container.innerHTML = "";
   classIds.forEach(id => {
     const cls = classesData[id];
+    const totalStudents = Array.isArray(cls.students) ? cls.students.length : (cls.studentsCount || 0);
+    const totalAssigned = cls.schedule ? Object.keys(cls.schedule).length : (cls.assignedCount || 0);
     const item = document.createElement("div");
     item.className = `class-list-item ${id === currentClassId ? "current" : ""}`;
     item.innerHTML = `
@@ -727,7 +845,7 @@ function renderClassList() {
         <div class="class-avatar">${escapeHtml(cls.name).charAt(0).toUpperCase()}</div>
         <div class="class-details">
           <span class="class-name">${escapeHtml(cls.name)}</span>
-          <span class="class-meta">${(cls.students || []).length} học sinh • ${Object.keys(cls.schedule || {}).length} ô đã phân công</span>
+          <span class="class-meta">${totalStudents} học sinh • ${totalAssigned} ô đã phân công</span>
         </div>
         ${id === currentClassId ? '<span class="current-badge">Đang xem</span>' : ''}
       </div>
@@ -765,7 +883,11 @@ function renderClassList() {
 }
 
 window.updateStudentList = () => {
-  if (!isAdmin || !currentClassId) return;
+  if (!isAdmin) return;
+  if (!currentClassId) {
+    alert("Vui lòng tạo ít nhất 1 lớp trước khi thao tác!");
+    return;
+  }
   const raw = document.getElementById("studentInput").value;
   currentClassData.students = raw.split("\n").map(s => s.trim()).filter(Boolean);
   classesData[currentClassId].students = currentClassData.students;
@@ -774,7 +896,15 @@ window.updateStudentList = () => {
 };
 
 window.autoAssignRandom = () => {
-  if (!isAdmin || !currentClassId || currentClassData.students.length === 0) return;
+  if (!isAdmin) return;
+  if (!currentClassId) {
+    alert("Vui lòng tạo ít nhất 1 lớp trước khi thao tác!");
+    return;
+  }
+  if (currentClassData.students.length === 0) {
+    alert("Danh sách học sinh đang trống! Vui lòng nhập danh sách học sinh trước.");
+    return;
+  }
   const shuffled = [...currentClassData.students];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -799,7 +929,11 @@ window.autoAssignRandom = () => {
 };
 
 window.clearSchedule = () => {
-  if (!isAdmin || !currentClassId) return;
+  if (!isAdmin) return;
+  if (!currentClassId) {
+    alert("Vui lòng tạo ít nhất 1 lớp trước khi thao tác!");
+    return;
+  }
   currentClassData.schedule = {};
   classesData[currentClassId].schedule = {};
   renderAll();
@@ -807,7 +941,11 @@ window.clearSchedule = () => {
 };
 
 window.saveClassNotice = () => {
-  if (!isAdmin || !currentClassId) return;
+  if (!isAdmin) return;
+  if (!currentClassId) {
+    alert("Vui lòng tạo ít nhất 1 lớp trước khi thao tác!");
+    return;
+  }
   const noticeInput = document.getElementById("noticeInput");
   const content = sanitizeNoticeHtml(noticeInput.innerHTML.trim());
   currentClassData.notice = content || "Chưa có thông tin báo bài mới.";
@@ -817,7 +955,11 @@ window.saveClassNotice = () => {
 };
 
 window.startNewCycle = () => {
-  if (!isAdmin || !currentClassId) return;
+  if (!isAdmin) return;
+  if (!currentClassId) {
+    alert("Vui lòng tạo ít nhất 1 lớp trước khi thao tác!");
+    return;
+  }
   if (!confirm("Bạn có chắc muốn xóa bảng hiện tại và cập nhật 6 tuần mới bắt đầu từ tuần này không?")) return;
 
   currentClassData.weekHeaders = createNewWeekHeaders();
@@ -962,10 +1104,12 @@ function renderNotice() {
   }
   
   if (noticeInput && isAdmin) {
-    if (currentClassData.notice && currentClassData.notice !== "Chưa có thông tin báo bài mới.") {
-      noticeInput.innerHTML = sanitizeNoticeHtml(currentClassData.notice);
-    } else {
-      noticeInput.innerHTML = "";
+    if (document.activeElement !== noticeInput) {
+      if (currentClassData.notice && currentClassData.notice !== "Chưa có thông tin báo bài mới.") {
+        noticeInput.innerHTML = sanitizeNoticeHtml(currentClassData.notice);
+      } else {
+        noticeInput.innerHTML = "";
+      }
     }
     noticeInput.classList.remove("hidden");
     if (noticeToolbar) noticeToolbar.classList.remove("hidden");
@@ -1090,6 +1234,66 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// Admin panel toggle (outside keydown)
+const adminPanelToggle = document.getElementById("adminPanelToggle");
+const adminPanel = document.getElementById("adminPanel");
+const adminPanelOpenBtn = document.getElementById("adminPanelOpenBtn");
+if (adminPanelToggle && adminPanel) {
+  adminPanelToggle.addEventListener('click', () => {
+    const isOpen = adminPanel.classList.toggle("is-open");
+    adminPanelToggle.setAttribute("aria-expanded", isOpen);
+    adminPanelToggle.setAttribute("aria-label", isOpen ? "Đóng bảng điều khiển" : "Mở bảng điều khiển");
+    adminPanel.inert = !isOpen;
+    if (adminPanelOpenBtn) {
+      adminPanelOpenBtn.classList.toggle("hidden", isOpen);
+    }
+  });
+}
+
+if (adminPanelOpenBtn && adminPanel) {
+  adminPanelOpenBtn.addEventListener('click', () => {
+    adminPanel.classList.add("is-open");
+    adminPanel.inert = false;
+    adminPanelOpenBtn.classList.add("hidden");
+    if (adminPanelToggle) {
+      adminPanelToggle.setAttribute("aria-expanded", "true");
+      adminPanelToggle.setAttribute("aria-label", "Đóng bảng điều khiển");
+    }
+  });
+}
+
+// Admin Panel event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Admin panel tabs
+  const adminTabs = document.querySelectorAll('.admin-panel-tab');
+  const adminTabPanels = document.querySelectorAll('.admin-tabpanel');
+  
+  adminTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.dataset.adminTab;
+      
+      // Update tabs
+      adminTabs.forEach(t => {
+        const isActive = t.dataset.adminTab === targetTab;
+        t.classList.toggle('active', isActive);
+        t.setAttribute('aria-selected', isActive);
+      });
+      
+      // Update panels
+      adminTabPanels.forEach(panel => {
+        const isActive = panel.id === `admin-tab-${targetTab}`;
+        panel.classList.toggle('active', isActive);
+        panel.hidden = !isActive;
+      });
+      
+      // Refresh drag list when switching to dragdrop tab
+      if (targetTab === 'dragdrop') {
+        updateStudentDragList();
+      }
+    });
+  });
+});
+
 // ===========================================
 // RICH TEXT EDITOR TOOLBAR
 // ===========================================
@@ -1102,6 +1306,9 @@ function initNoticeToolbar() {
   
   if (!toolbar || !editor) return;
   
+  // Ensure execCommand creates <font> tags compatible with sanitizer
+  try { document.execCommand('styleWithCSS', false, false); } catch (e) {}
+  
   // Format buttons
   toolbar.querySelectorAll('.toolbar-btn[data-format]').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -1110,20 +1317,24 @@ function initNoticeToolbar() {
       const value = btn.dataset.value || null;
       
       if (format === 'heading') {
-        document.execCommand('formatBlock', false, value);
+        // Toggle heading: if already H2, revert to div
+        const currentFormat = document.queryCommandValue('formatBlock').toLowerCase();
+        if (currentFormat === 'h2') {
+          document.execCommand('formatBlock', false, 'div');
+        } else {
+          document.execCommand('formatBlock', false, 'h2');
+        }
+      } else if (format === 'blockquote') {
+        // Toggle blockquote: if already blockquote, revert to div
+        const currentFormat = document.queryCommandValue('formatBlock').toLowerCase();
+        if (currentFormat === 'blockquote') {
+          document.execCommand('formatBlock', false, 'div');
+        } else {
+          document.execCommand('formatBlock', false, 'blockquote');
+        }
       } else if (format === 'removeFormat') {
         document.execCommand('removeFormat', false, null);
-        // Also clear inline styles
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const fragment = range.cloneContents();
-          const div = document.createElement('div');
-          div.appendChild(fragment);
-          const text = div.textContent;
-          range.deleteContents();
-          range.insertNode(document.createTextNode(text));
-        }
+        document.execCommand('formatBlock', false, 'div');
       } else {
         document.execCommand(format, false, value);
       }
@@ -1147,21 +1358,15 @@ function initNoticeToolbar() {
     });
   }
   
-  // Font size select
+  // Font size select - use execCommand, keep <font size> for sanitizer compatibility
   if (fontSizeSelect) {
     fontSizeSelect.addEventListener('change', () => {
       const value = fontSizeSelect.value;
       if (value) {
-        // Wrap selection in span with font-size
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const span = document.createElement('span');
-          span.style.fontSize = value;
-          range.surroundContents(span);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
+        const sizeMap = {
+          '12px': '1', '14px': '2', '16px': '3', '18px': '4', '20px': '5', '24px': '6'
+        };
+        document.execCommand('fontSize', false, sizeMap[value] || '3');
       }
       fontSizeSelect.value = '';
       editor.focus();
@@ -1221,28 +1426,8 @@ function initNoticeToolbar() {
     });
   }
   
-  // Placeholder handling
-  const placeholder = editor.dataset.placeholder;
-  if (placeholder) {
-    editor.addEventListener('focus', () => {
-      if (editor.textContent === placeholder) {
-        editor.textContent = '';
-        editor.classList.remove('placeholder');
-      }
-    });
-    
-    editor.addEventListener('blur', () => {
-      if (!editor.textContent.trim()) {
-        editor.textContent = placeholder;
-        editor.classList.add('placeholder');
-      }
-    });
-    
-    if (!editor.textContent.trim()) {
-      editor.textContent = placeholder;
-      editor.classList.add('placeholder');
-    }
-  }
+  // Placeholder is handled by CSS :empty:before pseudo-element
+  // No JS placeholder handling needed - it was causing placeholder to be saved as real data
 }
 
 // Initialize toolbar on DOMContentLoaded
@@ -1399,15 +1584,5 @@ document.addEventListener('DOMContentLoaded', () => {
     switchTab('about');
   } else if (window.location.hash === '#request') {
     switchTab('request');
-  }
-});
-
-window.addEventListener('hashchange', () => {
-  if (window.location.hash === '#about') {
-    switchTab('about');
-  } else if (window.location.hash === '#request') {
-    switchTab('request');
-  } else if (window.location.hash === '#home' || window.location.hash === '') {
-    switchTab('home');
   }
 });

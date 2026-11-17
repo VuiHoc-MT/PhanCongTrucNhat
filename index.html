@@ -9,10 +9,10 @@
 
   <!-- Open Graph / Social Sharing -->
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://unknow23-sketch.github.io/" />
+  <meta property="og:url" content="https://vuihoc-mt.github.io/phancongtrucnhat/" />
   <meta property="og:title" content="Lịch Trực Nhật & Báo Bài Lớp" />
   <meta property="og:description" content="Xem lịch trực nhật 6 tuần và thông tin báo bài, dặn dò mới nhất của lớp." />
-  <meta property="og:image" content="https://via.placeholder.com/1200x630/4f46e5/ffffff?text=Tr%E1%BB%B1c+Nh%E1%BA%ADt+L%E1%BB%9Bp" />
+  <meta property="og:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/icons/icon-512.svg" />
   <meta property="og:site_name" content="Trực Nhật Lớp" />
   <meta property="og:locale" content="vi_VN" />
 
@@ -20,7 +20,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Lịch Trực Nhật & Báo Bài Lớp" />
   <meta name="twitter:description" content="Quản lý lịch trực nhật lớp học, báo bài & ghi chú - Đồng bộ realtime" />
-  <meta name="twitter:image" content="https://via.placeholder.com/1200x630/4f46e5/ffffff?text=Tr%E1%BB%B1c+Nh%E1%BA%ADt+L%E1%BB%9Bp" />
+  <meta name="twitter:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/icons/icon-512.svg" />
 
   <!-- PWA / Mobile App Support -->
   <link rel="manifest" href="./manifest.json" />
@@ -153,6 +153,68 @@
   <!-- Progress scroll bar -->
   <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
+  <!-- Admin Panel (Slide-in from left) -->
+  <aside id="adminPanel" class="admin-panel" role="region" aria-label="Quản lý Admin" hidden>
+    <div class="admin-panel-inner">
+      <!-- Panel Header (title + toggle) -->
+      <div class="admin-panel-header">
+        <div class="admin-panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+          <span>Bảng điều khiển Admin</span>
+        </div>
+        <button type="button" class="admin-panel-toggle" id="adminPanelToggle" aria-label="Đóng bảng điều khiển" aria-expanded="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+      </div>
+
+      <!-- Panel Content (slides in) -->
+      <div id="adminPanelContent" class="admin-panel-content">
+        <!-- Tabs -->
+        <div class="admin-panel-tabs" role="tablist">
+          <button role="tab" class="admin-panel-tab active" data-admin-tab="students" aria-selected="true" aria-controls="admin-tab-students">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span>Cập nhật danh sách</span>
+          </button>
+          <button role="tab" class="admin-panel-tab" data-admin-tab="dragdrop" aria-selected="false" aria-controls="admin-tab-dragdrop">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12V7H5V6M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"></path></svg>
+            <span>Kéo thả học sinh</span>
+          </button>
+        </div>
+
+        <!-- Tab Panels -->
+        <div class="admin-panel-tabpanels">
+          <!-- Tab 1: Cập nhật danh sách -->
+          <section role="tabpanel" id="admin-tab-students" class="admin-tabpanel active" aria-labelledby="admin-tab-students-label" tabindex="0">
+            <div class="admin-tabpanel-header">
+              <h3 id="admin-tab-students-label">Danh sách học sinh</h3>
+              <span id="studentCount" class="student-count">0 học sinh</span>
+            </div>
+            <p class="admin-tabpanel-desc">Nhập mỗi tên 1 dòng rồi bấm Cập nhật.</p>
+            <textarea id="studentInput" rows="5" placeholder="Nguyễn Văn A&#10;Trần Thị B&#10;Lê Văn C..." class="textarea-styled mb-4" aria-label="Danh sách học sinh"></textarea>
+            <button onclick="updateStudentList()" class="btn btn-primary w-full" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Cập nhật danh sách</span>
+            </button>
+          </section>
+
+          <!-- Tab 2: Kéo thả học sinh -->
+          <section role="tabpanel" id="admin-tab-dragdrop" class="admin-tabpanel" aria-labelledby="admin-tab-dragdrop-label" tabindex="0" hidden>
+            <div class="admin-tabpanel-header">
+              <h3 id="admin-tab-dragdrop-label">Kéo thả vào bảng</h3>
+            </div>
+            <p class="admin-tabpanel-desc">Kéo tên học sinh vào ô trực nhật. Số lượt đã dùng hiển thị bên cạnh.</p>
+            <div id="studentDragList" class="student-drag-list" role="list" aria-label="Danh sách học sinh để kéo thả"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Reopen button for admin panel (visible when panel is closed) -->
+  <button type="button" id="adminPanelOpenBtn" class="admin-panel-reopen hidden" aria-label="Mở bảng điều khiển Admin" title="Mở bảng điều khiển">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+
   <main id="mainContent" class="main-content">
     <!-- PANEL: TRANG CHỦ -->
     <section role="tabpanel" id="panel-home" class="tab-panel active" aria-labelledby="tab-home" tabindex="0">
@@ -164,26 +226,7 @@
         <div id="syncStatus" class="sync-status">● Đang kết nối máy chủ...</div>
       </div>
 
-      <div id="mainLayout" class="layout-grid layout-grid--guest">
-        <!-- CỘT TRÁI: Danh sách lớp (Chỉ hiện khi là Admin) -->
-        <aside id="adminSidebar" class="hidden admin-sidebar w-full lg:w-80 flex-shrink-0 fade-in-up" role="complementary" aria-label="Quản lý lớp">
-          <div class="sidebar-header">
-            <h2 class="sidebar-title">Danh sách lớp</h2>
-            <span id="studentCount" class="student-count">0 học sinh</span>
-          </div>
-          <p class="sidebar-desc">Nhập mỗi tên 1 dòng rồi bấm Cập nhật, sau đó kéo thả vào bảng.</p>
-          
-          <textarea id="studentInput" rows="6" placeholder="Nguyễn Văn A&#10;Trần Thị B&#10;Lê Văn C..." 
-                    class="textarea-styled mb-4" aria-label="Danh sách học sinh"></textarea>
-          <button onclick="updateStudentList()" class="btn btn-primary w-full" type="button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>Cập nhật danh sách</span>
-          </button>
-
-          <div class="sidebar-hint">Kéo tên vào bảng:</div>
-          <div id="studentPool" class="student-pool" role="list" aria-label="Danh sách học sinh"></div>
-        </aside>
-
+      <div id="mainLayout" class="layout-grid">
         <!-- CỘT PHẢI: Bảng 6x6 -->
         <section class="content-card flex-1 flex flex-col min-w-0" role="main" aria-label="Bảng phân công">
           <div id="adminToolbar" class="toolbar hidden">
@@ -245,13 +288,13 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"></path><line x1="4" y1="20" x2="20" y2="20"></line></svg>
                   </button>
                   <button type="button" class="toolbar-btn" data-format="strikeThrough" title="Gạch ngang" aria-label="Gạch ngang">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><path d="M10 19v-6a4 4 0 0 1 4-4 4 4 0 0 1 4 4v6"></path></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"></path><path d="M14 12a4 4 0 0 1 0 8H6"></path><line x1="4" y1="12" x2="20" y2="12"></line></svg>
                   </button>
                 </div>
                 
                 <div class="toolbar-group">
                   <button type="button" class="toolbar-btn" data-format="heading" data-value="h2" title="Tiêu đề lớn" aria-label="Tiêu đề lớn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><path d="M6 12v-6a4 4 0 0 1 4-4 4 4 0 0 1 4 4v6"></path><path d="M6 18v-6a4 4 0 0 1 4-4 4 4 0 0 1 4 4v6"></path></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12"></path><path d="M12 6v12"></path><path d="M4 12h8"></path><path d="M16 10a2 2 0 1 1 4 0c0 1.5-4 3-4 6h4"></path></svg>
                   </button>
                 </div>
 
@@ -432,7 +475,7 @@
             </div>
             <div class="cta-contact">
               <a class="cta-contact-link" href="https://github.com/VuiHoc-MT/phancongtrucnhat/" target="_blank" rel="noopener" aria-label="GitHub dự án">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"></path></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"></path></svg>
                 <span>GitHub</span>
               </a>
               <span class="cta-contact-link is-disabled" title="Tạm thời chưa thêm email" aria-disabled="true">
@@ -444,8 +487,9 @@
         </section>
       </div>
     </section>
+
     <!-- PANEL: YÊU CẦU ỦY QUYỀN -->
-    <section role="tabpanel" id="panel-request" class="tab-panel" aria-label="Yêu cầu ủy quyền" tabindex="0" hidden>
+    <section role="tabpanel" id="panel-request" class="tab-panel" aria-labelledby="tab-request" tabindex="0" hidden>
       <div class="request-container">
         <div class="request-card scroll-reveal" data-reveal="fade-up">
           <div class="request-icon" aria-hidden="true">
