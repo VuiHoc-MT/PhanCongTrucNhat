@@ -1,0 +1,83 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "admins": {
+      ".read": false,
+      ".write": false,
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      }
+    },
+
+    "accessRequests": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$reqId": {
+        ".write": "!data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['email', 'timestamp']) && newData.child('email').isString() && newData.child('email').val().length > 3 && newData.child('email').val().length <= 254 && (!newData.child('className').exists() || (newData.child('className').isString() && newData.child('className').val().length <= 50)) && (!newData.child('message').exists() || (newData.child('message').isString() && newData.child('message').val().length <= 300)) && newData.child('timestamp').isNumber() && newData.child('timestamp').val() >= now - 300000 && newData.child('timestamp').val() <= now + 300000",
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+
+    "trucNhatLop": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('trucNhatLop/activeGuests').child(auth.uid).exists())",
+      ".write": false,
+
+      "classes": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('trucNhatLop/activeGuests').child(auth.uid).exists())",
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        ".indexOn": ["createdAt"],
+        "$classId": {
+          ".validate": "newData.hasChildren(['name'])"
+        }
+      },
+
+      "currentClassId": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('trucNhatLop/activeGuests').child(auth.uid).exists())",
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      },
+
+      "posts": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('trucNhatLop/activeGuests').child(auth.uid).exists())",
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        "$postId": {
+          ".validate": "newData.hasChildren(['title'])"
+        }
+      },
+
+      "guests": {
+        ".read": false,
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        "$guestName": {
+          ".read": true,
+          ".validate": "newData.val() === true"
+        }
+      },
+
+      "activeGuests": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChildren(['name']) && newData.child('name').isString() && newData.child('name').val().length <= 50"
+        }
+      },
+
+      "chatMessages": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('trucNhatLop/activeGuests').child(auth.uid).exists())",
+        ".indexOn": ["timestamp"],
+        "$msgId": {
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || root.child('admins').child(auth.uid).val() === true) && (root.child('admins').child(auth.uid).val() === true || root.child('trucNhatLop/activeGuests').child(auth.uid).exists())",
+          ".validate": "newData.hasChildren(['uid', 'name', 'text', 'isAdmin', 'timestamp']) && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 40 && (!newData.child('name').val().toLowerCase().contains('admin') || root.child('admins').child(auth.uid).val() === true) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('isAdmin').isBoolean() && (newData.child('isAdmin').val() === false || root.child('admins').child(auth.uid).val() === true) && newData.child('timestamp').isNumber() && newData.child('timestamp').val() >= now - 300000 && newData.child('timestamp').val() <= now + 300000",
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}

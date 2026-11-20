@@ -12,7 +12,9 @@
   <meta property="og:url" content="https://vuihoc-mt.github.io/phancongtrucnhat/" />
   <meta property="og:title" content="Lịch Trực Nhật & Báo Bài Lớp" />
   <meta property="og:description" content="Xem lịch trực nhật 6 tuần và thông tin báo bài, dặn dò mới nhất của lớp." />
-  <meta property="og:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/favicon.svg" />
+  <meta property="og:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/og-preview.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:site_name" content="Trực Nhật Lớp" />
   <meta property="og:locale" content="vi_VN" />
 
@@ -20,11 +22,11 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Lịch Trực Nhật & Báo Bài Lớp" />
   <meta name="twitter:description" content="Quản lý lịch trực nhật lớp học, báo bài & ghi chú - Đồng bộ realtime" />
-  <meta name="twitter:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/favicon.svg" />
+  <meta name="twitter:image" content="https://vuihoc-mt.github.io/phancongtrucnhat/og-preview.png" />
 
   <!-- PWA / Mobile App Support -->
   <link rel="manifest" href="./manifest.json" />
-  <link rel="apple-touch-icon" href="./favicon.svg" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -40,14 +42,44 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
   <!-- Custom Styles -->
   <link rel="stylesheet" href="./style.css" />
 
 </head>
 <body class="bg-ocean text-slate-800 min-h-screen font-sans">
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- Login Page -->
+  <div id="loginPage" class="login-page hidden">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="login-brand-icon">TN</span>
+        <h1>Trực Nhật Lớp</h1>
+        <p id="loginStatus">Đang kiểm tra phiên đăng nhập...</p>
+      </div>
+      <div class="login-divider"></div>
+      <div class="login-section">
+        <h2>Khách được cấp phép</h2>
+        <p>Nhập tên đã đăng ký để xem lịch trực nhật và báo bài.</p>
+        <input type="text" id="guestNameInput" placeholder="Nhập tên của bạn..." class="login-input" autocomplete="off" />
+        <button type="button" class="btn btn-primary login-btn" id="guestLoginBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          <span>Vào với tên khách</span>
+        </button>
+        <p id="guestError" class="login-error"></p>
+      </div>
+      <div class="login-divider"><span>hoặc</span></div>
+      <div class="login-section">
+        <button type="button" class="btn btn-secondary login-btn" id="adminLoginBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          <span>Đăng nhập Admin</span>
+        </button>
+        <button type="button" class="btn btn-ghost login-btn" id="loginCloseBtn" style="margin-top:10px;">Đóng — Xem trang giới thiệu</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Hiệu ứng sóng biển nhiều lớp, cuộn liên tục -->
   <div class="ocean-waves" aria-hidden="true">
     <div class="wave wave--1">
@@ -70,22 +102,34 @@
   <!-- Thanh điều hướng trên cùng -->
   <nav class="top-nav" id="topNav" role="navigation" aria-label="Điều hướng chính">
     <div class="top-nav-inner">
-      <a href="#home" class="nav-brand" data-tab="home" aria-label="Trang chủ">
+      <a href="#about" class="nav-brand" aria-label="Trang chủ">
         <span class="nav-brand-icon" aria-hidden="true">TN</span>
         <span class="nav-brand-text">Trực Nhật Lớp</span>
       </a>
       <div class="nav-tabs" role="tablist">
-        <button role="tab" class="nav-tab active" data-tab="home" id="tab-home" aria-selected="true" aria-controls="panel-home">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-          <span>Trang chủ</span>
-        </button>
-        <button role="tab" class="nav-tab" data-tab="about" id="tab-about" aria-selected="false" aria-controls="panel-about">
+        <button role="tab" class="nav-tab active" data-tab="about" id="tab-about" aria-selected="true" aria-controls="panel-about">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
           <span>Giới thiệu</span>
+        </button>
+        <button role="tab" class="nav-tab" data-tab="home" id="tab-home" aria-selected="false" aria-controls="panel-home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span>Phân công</span>
         </button>
         <button role="tab" class="nav-tab" data-tab="request" id="tab-request" aria-selected="false" aria-controls="panel-request">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
           <span>Ủy quyền</span>
+        </button>
+        <button role="tab" class="nav-tab" data-tab="random" id="tab-random" aria-selected="false" aria-controls="panel-random">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><circle cx="15.5" cy="15.5" r="1.5"></circle><circle cx="15.5" cy="8.5" r="1.5"></circle><circle cx="8.5" cy="15.5" r="1.5"></circle></svg>
+          <span>Random</span>
+        </button>
+        <button role="tab" class="nav-tab" data-tab="chat" id="tab-chat" aria-selected="false" aria-controls="panel-chat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <span>Chat</span>
+        </button>
+        <button role="tab" class="nav-tab" data-tab="bao" id="tab-bao" aria-selected="false" aria-controls="panel-bao">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8M15 18h-5M10 6h8M10 10h8"></path></svg>
+          <span>Báo</span>
         </button>
       </div>
       <div class="nav-actions" id="navActions">
@@ -93,7 +137,7 @@
           Chế độ: Khách (Chỉ xem)
         </span>
         <!-- Class Selector Dropdown -->
-        <div id="classSelector" class="hidden dropdown" role="menu" aria-label="Chọn lớp">
+        <div id="classSelector" class="hidden dropdown" aria-label="Chọn lớp">
           <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" id="classDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-label="Lớp hiện tại">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             <span id="currentClassName">Chọn lớp</span>
@@ -117,16 +161,15 @@
             </div>
           </div>
         </div>
-        <button id="loginBtn" onclick="loginWithGoogle()" class="btn btn-primary btn-sm" type="button">
+        <button id="loginBtn" onclick="showLoginPage()" class="btn btn-primary btn-sm" type="button">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
-          <span>Đăng nhập Admin</span>
+          <span>Đăng nhập</span>
         </button>
         <button id="logoutBtn" onclick="logoutAdmin()" class="hidden btn btn-danger btn-sm" type="button">
           Thoát Admin
         </button>
       </div>
     </div>
-    <div class="nav-indicator" id="navIndicator" aria-hidden="true"></div>
   </nav>
 
   <!-- Progress scroll bar -->
@@ -196,18 +239,18 @@
 
   <main id="mainContent" class="main-content">
     <!-- PANEL: TRANG CHỦ -->
-    <section role="tabpanel" id="panel-home" class="tab-panel active" aria-labelledby="tab-home">
+    <section role="tabpanel" id="panel-home" class="tab-panel" aria-labelledby="tab-home" hidden>
       <div class="page-header fade-in-up">
         <div class="page-header-content">
-          <h1 class="page-title">Lịch Trực Nhật Lớp</h1>
-          <p class="page-subtitle">Quản lý phân công trực nhật 6 tuần, báo bài & ghi chú lớp - Đồng bộ realtime</p>
+          <h1 class="page-title">Bảng Phân Công Công Việc</h1>
+          <p class="page-subtitle">Quản lý phân công công việc 6 tuần - Đồng bộ realtime</p>
         </div>
         <div id="syncStatus" class="sync-status">● Đang kết nối máy chủ...</div>
       </div>
 
       <div id="mainLayout" class="layout-grid">
         <!-- CỘT PHẢI: Bảng 6x6 -->
-        <section class="content-card flex-1 flex flex-col min-w-0" role="main" aria-label="Bảng phân công">
+        <section class="content-card flex-1 flex flex-col min-w-0" role="region" aria-label="Bảng phân công">
           <div id="adminToolbar" class="toolbar hidden">
             <div class="toolbar-actions flex gap-2">
               <button onclick="autoAssignRandom()" class="btn btn-primary" type="button">
@@ -226,6 +269,12 @@
             <span class="toolbar-hint">* Mọi thay đổi tự động lưu lên mạng cho cả lớp xem</span>
           </div>
 
+          <!-- Tap notification bar (mobile) -->
+          <div id="tapNotifyBar" class="tap-notify-bar hidden">
+            <span class="tap-notify-text">Đang chọn: <strong id="tapNotifyName"></strong> — Chạm vào ô lịch để gán</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="tapNotifyCancel">Bỏ chọn</button>
+          </div>
+
           <div class="table-wrapper flex-1 overflow-auto">
             <table class="schedule-table" role="grid" aria-label="Lịch trực nhật 6 tuần">
               <thead>
@@ -237,119 +286,12 @@
             </table>
           </div>
 
-          <!-- KHUNG BÁO BÀI / GHI CHÚ LỚP -->
-          <div class="notice-section">
-            <div class="notice-header">
-              <h3 class="notice-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Báo bài & Ghi chú của lớp
-              </h3>
-              <button id="saveNoticeBtn" onclick="saveClassNotice()" class="hidden btn btn-primary btn-sm" type="button">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                <span>Lưu báo bài</span>
-              </button>
-            </div>
-
-            <div id="noticeDisplay" class="notice-display rich-content" role="region" aria-label="Thông báo lớp">
-              Chưa có thông tin báo bài mới.
-            </div>
-
-            <div class="notice-editor">
-              <div id="noticeToolbar" class="notice-toolbar hidden" role="toolbar" aria-label="Định dạng văn bản">
-                <div class="toolbar-group">
-                  <button type="button" class="toolbar-btn" data-format="bold" title="Đậm (Ctrl+B)" aria-label="Đậm">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>
-                  </button>
-                  <button type="button" class="toolbar-btn" data-format="italic" title="Nghiêng (Ctrl+I)" aria-label="Nghiêng">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
-                  </button>
-                  <button type="button" class="toolbar-btn" data-format="underline" title="Gạch chân (Ctrl+U)" aria-label="Gạch chân">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"></path><line x1="4" y1="20" x2="20" y2="20"></line></svg>
-                  </button>
-                  <button type="button" class="toolbar-btn" data-format="strikeThrough" title="Gạch ngang" aria-label="Gạch ngang">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"></path><path d="M14 12a4 4 0 0 1 0 8H6"></path><line x1="4" y1="12" x2="20" y2="12"></line></svg>
-                  </button>
-                </div>
-                
-                <div class="toolbar-group">
-                  <button type="button" class="toolbar-btn" data-format="heading" data-value="h2" title="Tiêu đề lớn" aria-label="Tiêu đề lớn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12"></path><path d="M12 6v12"></path><path d="M4 12h8"></path><path d="M16 10a2 2 0 1 1 4 0c0 1.5-4 3-4 6h4"></path></svg>
-                  </button>
-                </div>
-
-                <div class="toolbar-group">
-                  <select id="fontFamilySelect" class="toolbar-select" title="Phông chữ" aria-label="Chọn phông chữ">
-                    <optgroup label="Phông chữ">
-                      <option value="" selected>Mặc định</option>
-                      <option value="'Inter', sans-serif">Inter</option>
-                      <option value="'Georgia', serif">Georgia</option>
-                      <option value="'Times New Roman', serif">Times New Roman</option>
-                      <option value="'Courier New', monospace">Courier New</option>
-                      <option value="'Arial', sans-serif">Arial</option>
-                      <option value="'Verdana', sans-serif">Verdana</option>
-                      <option value="'Tahoma', sans-serif">Tahoma</option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                <div class="toolbar-group">
-                  <select id="fontSizeSelect" class="toolbar-select" title="Cỡ chữ" aria-label="Chọn cỡ chữ">
-                    <optgroup label="Cỡ chữ">
-                      <option value="" selected>Mặc định</option>
-                      <option value="12px">Rất nhỏ (12px)</option>
-                      <option value="14px">Nhỏ (14px)</option>
-                      <option value="16px">Vừa (16px)</option>
-                      <option value="18px">Lớn (18px)</option>
-                      <option value="20px">Rất lớn (20px)</option>
-                      <option value="24px">Tiêu đề (24px)</option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                <div class="toolbar-group">
-                  <select id="textColorSelect" class="toolbar-select" title="Màu chữ" aria-label="Chọn màu chữ">
-                    <optgroup label="Màu chữ">
-                      <option value="" selected>Mặc định</option>
-                      <option value="#0c4a6e">Xanh đậm</option>
-                      <option value="#0284c7">Xanh dương</option>
-                      <option value="#06b6d4">Xanh ngọc</option>
-                      <option value="#10b981">Xanh lá</option>
-                      <option value="#f59e0b">Cam</option>
-                      <option value="#ef4444">Đỏ</option>
-                      <option value="#6366f1">Tím</option>
-                      <option value="#ec4899">Hồng</option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                <div class="toolbar-group">
-                  <button type="button" class="toolbar-btn" data-format="insertUnorderedList" title="Danh sách dấu chấm" aria-label="Danh sách dấu chấm">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"></line><line x1="9" y1="12" x2="20" y2="12"></line><line x1="9" y1="18" x2="20" y2="18"></line><line x1="4" y1="6" x2="4.01" y2="6"></line><line x1="4" y1="12" x2="4.01" y2="12"></line><line x1="4" y1="18" x2="4.01" y2="18"></line></svg>
-                  </button>
-                  <button type="button" class="toolbar-btn" data-format="insertOrderedList" title="Danh sách số" aria-label="Danh sách số">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 18v-6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h2"></path></svg>
-                  </button>
-                  <button type="button" class="toolbar-btn" data-format="blockquote" title="Trích dẫn" aria-label="Trích dẫn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1H3v2l-1 1 1 1h1v2c0 1 0 2 1 2 1 0 2-1 2-2 0-.25.25-.5.25-1 0-1 1-2 2-2h.75c0 2.75-2.5 5-7 5z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.5-2.5 5-7 5z"></path></svg>
-                  </button>
-                </div>
-
-                <div class="toolbar-group">
-                  <button type="button" class="toolbar-btn" data-format="removeFormat" title="Xóa định dạng" aria-label="Xóa định dạng">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v6m0 0l-3-3m3 3l3-3M8 12h8"></path><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 16a5 5 0 1 1 5-5"></path></svg>
-                  </button>
-                </div>
-              </div>
-
-              <div id="noticeInput" class="notice-input hidden" contenteditable="true" role="textbox" aria-label="Nội dung báo bài" data-placeholder="Nhập nội dung báo bài, dặn dò kiểm tra hoặc thông báo lớp tại đây..."></div>
-            </div>
-          </div>
         </section>
       </div>
     </section>
 
     <!-- PANEL: GIỚI THIỆU -->
-    <section role="tabpanel" id="panel-about" class="tab-panel" aria-labelledby="tab-about" hidden>
+    <section role="tabpanel" id="panel-about" class="tab-panel active" aria-labelledby="tab-about">
       <div class="about-container">
         <!-- Hero Section -->
         <section class="about-hero scroll-reveal" data-reveal="fade-up">
@@ -359,9 +301,9 @@
             <div class="hero-shape shape-3"></div>
           </div>
           <div class="about-hero-content">
-            <div class="hero-badge">Phiên bản 2.0 • Cập nhật 2026</div>
+            <div class="hero-badge">Phiên bản 3.0 • Trực nhật thông minh</div>
             <h1 class="hero-title">Bảng Phân Công <span class="gradient-text">Trực Nhật Lớp</span></h1>
-            <p class="hero-description">Giải pháp quản lý lịch trực nhật thông minh, giúp lớp học tự chủ, công bằng & minh bạch. Đồng bộ realtime qua Firebase, không cần cài đặt.</p>
+            <p class="hero-description">Một ứng dụng gọn nhẹ giúp lớp học quản lý lịch trực nhật, báo bài, chọn người ngẫu nhiên bằng đàn cá bơi về rạn san hô và trò chuyện cùng nhau — tất cả đồng bộ realtime qua Firebase, không cần cài đặt.</p>
             <div class="hero-stats">
               <div class="stat-item">
                 <span class="stat-number" data-count="6">0</span>
@@ -369,15 +311,15 @@
               </div>
               <div class="stat-item">
                 <span class="stat-number" data-count="5">0</span>
-                <span class="stat-label">Nhiệm vụ</span>
+                <span class="stat-label">Đầu việc trực nhật</span>
               </div>
               <div class="stat-item">
                 <span class="stat-number" data-count="50">0</span>
-                <span class="stat-label">Học sinh tối đa</span>
+                <span class="stat-label">Màu san hô random</span>
               </div>
               <div class="stat-item">
-                <span class="stat-number" data-count="99">0</span>
-                <span class="stat-label">% Uptime</span>
+                <span class="stat-number" data-count="100">0</span>
+                <span class="stat-label">% Miễn phí</span>
               </div>
             </div>
           </div>
@@ -387,25 +329,48 @@
         <section class="about-section scroll-reveal" data-reveal="fade-up" style="transition-delay: 100ms;">
           <div class="section-header">
             <span class="section-tag">Tính năng nổi bật</span>
-            <h2 class="section-title">Tất cả những gì lớp bạn cần</h2>
-            <p class="section-desc">Bảng phân công trực nhật, Báo bài và Nhiều lớp học — đơn giản, công bằng và hiệu quả</p>
+            <h2 class="section-title">Mọi thứ lớp bạn cần, trong một nơi</h2>
+            <p class="section-desc"> Mệt mỏi với việc phải phân công trực nhật cho lớp? </p>
+            <p class = "section-desc">Mệt mỏi vì phải có nhiều tab từ random, thông báo tới nhắn tin, báo bài? </p>
+            
           </div>
           <div class="features-grid">
-            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 0ms;">
+            <article class="feature-card scroll-reveal" data-reveal="fade-up" style="transition-delay: 1ms;">
               <div class="feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
               </div>
               <h3 class="feature-title">Bảng phân công trực nhật</h3>
-              <p class="feature-desc">Xem lịch trực nhật 6 tuần với các đầu việc rõ ràng. Kéo thả trực quan hoặc tự động phân công ngẫu nhiên, công bằng cho cả lớp.</p>
+              <p class="feature-desc">Lịch trực nhật 6 tuần với các đầu việc rõ ràng. Kéo thả trực quan hoặc tự động phân công ngẫu nhiên, công bằng cho cả lớp.</p>
             </article>
-            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 100ms;">
+            <article class="feature-card scroll-reveal" data-reveal="fade-up" style="transition-delay: 60ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><circle cx="15.5" cy="15.5" r="1.5"></circle><circle cx="15.5" cy="8.5" r="1.5"></circle><circle cx="8.5" cy="15.5" r="1.5"></circle></svg>
+              </div>
+              <h3 class="feature-title">Random bằng cá 🐠</h3>
+              <p class="feature-desc">Đàn cá đủ màu bơi quanh rồi tụ về các rạn san hô (mỗi bạn một rạn) — rạn nào được nhiều cá vây quanh nhất sẽ là người được chọn, kèm pháo giấy chúc mừng.</p>
+            </article>
+            <article class="feature-card scroll-reveal" data-reveal="fade-up" style="transition-delay: 120ms;">
               <div class="feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
               </div>
-              <h3 class="feature-title">Báo bài</h3>
-              <p class="feature-desc">Khu vực báo bài & ghi chú riêng: Admin soạn thảo với định dạng văn bản, học sinh xem cập nhật tức thì.</p>
+              <h3 class="feature-title">Báo bài của lớp</h3>
+              <p class="feature-desc">Trang Báo hiển thị báo bài riêng của đúng lớp đang chọn. Admin soạn thảo với định dạng văn bản, học sinh xem cập nhật tức thì.</p>
             </article>
-            <article class="feature-card" data-reveal="fade-up" style="transition-delay: 200ms;">
+            <article class="feature-card scroll-reveal" data-reveal="fade-up" style="transition-delay: 180ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8M15 18h-5M10 6h8M10 10h8"></path></svg>
+              </div>
+              <h3 class="feature-title">Bài báo</h3>
+              <p class="feature-desc">Admin đăng các bài báo có tiêu đề & tóm tắt; mọi người bấm vào để đọc đầy đủ. Tin tức của lớp luôn gọn gàng, dễ tìm.</p>
+            </article>
+            <article class="feature-card scroll-reveal" data-reveal="fade-up" style="transition-delay: 240ms;">
+              <div class="feature-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <h3 class="feature-title">Chat lớp</h3>
+              <p class="feature-desc">Kênh trò chuyện chung: Admin có tag 🦋, khách tự đặt tên (đổi bằng chuột phải). Tin nhắn đồng bộ realtime cho cả lớp.</p>
+            </article>
+            <article class="feature-card scroll-reveal" data-reveal="fade-up" style="transition-delay: 300ms;">
               <div class="feature-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               </div>
@@ -429,9 +394,9 @@
                 <a href="https://github.com/VuiHoc-MT/phancongtrucnhat/" class="founder-link" aria-label="GitHub" target="_blank" rel="noopener">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"></path></svg>
                 </a>
-                <a href="#" class="founder-link is-disabled" aria-label="Email" title="Tạm thời chưa thêm email" aria-disabled="true">
+                <span class="founder-link is-disabled" aria-label="Email" title="Tạm thời chưa thêm email" aria-disabled="true" tabindex="-1">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                </a>
+                </span>
               </div>
             </div>
           </div>
@@ -443,7 +408,7 @@
             <h2 class="cta-title">Sẵn sàng cho lớp của bạn?</h2>
             <p class="cta-desc">Đăng nhập ngay hoặc gửi yêu cầu đến chủ web để được ủy quyền admin</p>
             <div class="cta-actions">
-              <button class="btn btn-primary" type="button" onclick="loginWithGoogle()">
+              <button class="btn btn-primary" type="button" onclick="showLoginPage()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
                 <span>Đăng nhập ngay</span>
               </button>
@@ -490,7 +455,238 @@
       </div>
     </section>
 
+    <!-- PANEL: RANDOM -->
+    <section role="tabpanel" id="panel-random" class="tab-panel" aria-labelledby="tab-random" hidden>
+      <div class="random-container">
+        <div class="page-header fade-in-up">
+          <div class="page-header-content">
+            <h1 class="page-title">🐠 Random chọn người</h1>
+            <p class="page-subtitle">Đàn cá bơi quanh và tụ về các rạn san hô — rạn nhiều cá nhất là bạn may mắn. Áp dụng cho lớp đang chọn.</p>
+          </div>
+          <div class="random-controls">
+            <label class="random-duration-label" for="randomDuration">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              Thời gian
+            </label>
+            <select id="randomDuration" class="toolbar-select" aria-label="Thời gian quay random">
+              <option value="3">3 giây (rất nhanh)</option>
+              <option value="5" selected>5 giây (nhanh)</option>
+              <option value="8">8 giây (vừa)</option>
+              <option value="12">12 giây (chậm)</option>
+              <option value="20">20 giây (rất chậm)</option>
+            </select>
+            <button type="button" class="btn btn-primary" onclick="startRandomDraw()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              <span>Random ngay</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="random-board" id="randomBoard" aria-label="Bảng tên học sinh"></div>
+
+        <div class="random-winner" id="randomWinner">
+          <div class="confetti-layer" aria-hidden="true"></div>
+          <div class="winner-card">
+            <div class="winner-crown">🎉</div>
+            <div class="winner-label">Chúc mừng bạn</div>
+            <div class="winner-name">—</div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeRandomWinner()">Đóng</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL: CHAT -->
+    <section role="tabpanel" id="panel-chat" class="tab-panel" aria-labelledby="tab-chat" hidden>
+      <div class="chat-container">
+        <div class="chat-header">
+          <div class="chat-identity" id="chatMyName" title="Nhấn chuột phải để đổi tên">Bạn: (chưa đặt tên)</div>
+          <div class="chat-header-actions">
+            <input type="text" id="chatNicknameInput" class="chat-nickname-input hidden" placeholder="Tên của bạn..." maxlength="30" />
+            <button type="button" class="btn btn-ghost btn-sm" id="chatNicknameToggle" onclick="setChatNickname()">Đổi tên</button>
+          </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-empty">Chưa có tin nhắn. Hãy là người đầu tiên!</div>
+        </div>
+        <div class="chat-input-bar">
+          <input type="text" id="chatInput" class="chat-input" placeholder="Nhập tin nhắn..." maxlength="500" onkeydown="if(event.key==='Enter'){event.preventDefault();sendChatMessage();}" />
+          <button type="button" class="btn btn-primary" onclick="sendChatMessage()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            <span>Gửi</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL: BÁO -->
+    <section role="tabpanel" id="panel-bao" class="tab-panel" aria-labelledby="tab-bao" hidden>
+      <div class="bao-container">
+        <!-- Báo bài of the selected class -->
+        <div class="bao-baibai-card">
+          <div class="bao-baibai-head">
+            <h2 class="bao-baibai-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              Báo bài lớp <span id="baoClassName">—</span>
+            </h2>
+            <button id="saveNoticeBtn" onclick="saveClassNotice()" class="hidden btn btn-primary btn-sm" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span>Lưu báo bài</span>
+            </button>
+          </div>
+
+          <div id="noticeDisplay" class="notice-display rich-content" role="region" aria-label="Thông báo lớp">
+            Chưa có thông tin báo bài mới.
+          </div>
+
+          <div class="notice-editor">
+            <div id="noticeToolbar" class="notice-toolbar hidden" role="toolbar" aria-label="Định dạng văn bản">
+              <div class="toolbar-group">
+                <button type="button" class="toolbar-btn" data-format="bold" title="Đậm (Ctrl+B)" aria-label="Đậm">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>
+                </button>
+                <button type="button" class="toolbar-btn" data-format="italic" title="Nghiêng (Ctrl+I)" aria-label="Nghiêng">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
+                </button>
+                <button type="button" class="toolbar-btn" data-format="underline" title="Gạch chân (Ctrl+U)" aria-label="Gạch chân">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"></path><line x1="4" y1="20" x2="20" y2="20"></line></svg>
+                </button>
+                <button type="button" class="toolbar-btn" data-format="strikeThrough" title="Gạch ngang" aria-label="Gạch ngang">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"></path><path d="M14 12a4 4 0 0 1 0 8H6"></path><line x1="4" y1="12" x2="20" y2="12"></line></svg>
+                </button>
+              </div>
+              <div class="toolbar-group">
+                <button type="button" class="toolbar-btn" data-format="heading" data-value="h2" title="Tiêu đề lớn" aria-label="Tiêu đề lớn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12"></path><path d="M12 6v12"></path><path d="M4 12h8"></path><path d="M16 10a2 2 0 1 1 4 0c0 1.5-4 3-4 6h4"></path></svg>
+                </button>
+              </div>
+              <div class="toolbar-group">
+                <select id="fontFamilySelect" class="toolbar-select" title="Phông chữ" aria-label="Chọn phông chữ">
+                  <optgroup label="Phông chữ">
+                    <option value="" selected>Mặc định</option>
+                    <option value="'Inter', sans-serif">Inter</option>
+                    <option value="'Georgia', serif">Georgia</option>
+                    <option value="'Times New Roman', serif">Times New Roman</option>
+                    <option value="'Courier New', monospace">Courier New</option>
+                    <option value="'Arial', sans-serif">Arial</option>
+                    <option value="'Verdana', sans-serif">Verdana</option>
+                    <option value="'Tahoma', sans-serif">Tahoma</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="toolbar-group">
+                <select id="fontSizeSelect" class="toolbar-select" title="Cỡ chữ" aria-label="Chọn cỡ chữ">
+                  <optgroup label="Cỡ chữ">
+                    <option value="" selected>Mặc định</option>
+                    <option value="12px">Rất nhỏ (12px)</option>
+                    <option value="14px">Nhỏ (14px)</option>
+                    <option value="16px">Vừa (16px)</option>
+                    <option value="18px">Lớn (18px)</option>
+                    <option value="20px">Rất lớn (20px)</option>
+                    <option value="24px">Tiêu đề (24px)</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="toolbar-group">
+                <select id="textColorSelect" class="toolbar-select" title="Màu chữ" aria-label="Chọn màu chữ">
+                  <optgroup label="Màu chữ">
+                    <option value="" selected>Mặc định</option>
+                    <option value="#0c4a6e">Xanh đậm</option>
+                    <option value="#0284c7">Xanh dương</option>
+                    <option value="#06b6d4">Xanh ngọc</option>
+                    <option value="#10b981">Xanh lá</option>
+                    <option value="#f59e0b">Cam</option>
+                    <option value="#ef4444">Đỏ</option>
+                    <option value="#6366f1">Tím</option>
+                    <option value="#ec4899">Hồng</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="toolbar-group">
+                <button type="button" class="toolbar-btn" data-format="insertUnorderedList" title="Danh sách dấu chấm" aria-label="Danh sách dấu chấm">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"></line><line x1="9" y1="12" x2="20" y2="12"></line><line x1="9" y1="18" x2="20" y2="18"></line><line x1="4" y1="6" x2="4.01" y2="6"></line><line x1="4" y1="12" x2="4.01" y2="12"></line><line x1="4" y1="18" x2="4.01" y2="18"></line></svg>
+                </button>
+                <button type="button" class="toolbar-btn" data-format="insertOrderedList" title="Danh sách số" aria-label="Danh sách số">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 18v-6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h2"></path></svg>
+                </button>
+                <button type="button" class="toolbar-btn" data-format="blockquote" title="Trích dẫn" aria-label="Trích dẫn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1H3v2l-1 1 1 1h1v2c0 1 0 2 1 2 1 0 2-1 2-2 0-.25.25-.5.25-1 0-1 1-2 2-2h.75c0 2.75-2.5 5-7 5z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.5-2.5 5-7 5z"></path></svg>
+                </button>
+              </div>
+              <div class="toolbar-group">
+                <button type="button" class="toolbar-btn" data-format="removeFormat" title="Xóa định dạng" aria-label="Xóa định dạng">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v6m0 0l-3-3m3 3l3-3M8 12h8"></path><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 16a5 5 0 1 1 5-5"></path></svg>
+                </button>
+              </div>
+            </div>
+            <div id="noticeInput" class="notice-input hidden" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Nội dung báo bài" data-placeholder="Nhập nội dung báo bài, dặn dò kiểm tra hoặc thông báo lớp tại đây..."></div>
+          </div>
+        </div>
+
+        <!-- Admin-created report posts -->
+        <div class="bao-posts-head">
+          <h2 class="bao-posts-title">Bài báo</h2>
+          <button type="button" id="baoNewPostBtn" class="btn btn-primary btn-sm hidden" onclick="openBaoEditor()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Viết bài</span>
+          </button>
+        </div>
+        <div id="baoPostsList" class="bao-posts-list">
+          <div class="bao-empty">Chưa có bài báo nào.</div>
+        </div>
+      </div>
+    </section>
+
   </main>
+
+  <!-- Báo: Post editor modal -->
+  <div class="modal-overlay" id="baoEditModal" role="dialog" aria-modal="true" aria-labelledby="baoEditTitle" hidden>
+    <div class="modal bao-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="baoEditTitle">Viết bài báo</h2>
+        <button type="button" class="modal-close" id="baoEditClose" aria-label="Đóng">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="baoPostTitle">Tiêu đề</label>
+          <input type="text" id="baoPostTitle" class="form-input" placeholder="Tiêu đề bài báo" maxlength="120">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="baoPostSummary">Tóm tắt (không bắt buộc)</label>
+          <input type="text" id="baoPostSummary" class="form-input" placeholder="Một câu tóm tắt ngắn" maxlength="200">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="baoPostContent">Nội dung</label>
+          <textarea id="baoPostContent" class="textarea-styled" rows="8" placeholder="Nhập nội dung bài báo..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="baoEditCancel" onclick="closeBaoEditor()">Hủy</button>
+        <button type="button" class="btn btn-primary" id="baoEditSave" onclick="saveBaoPost()">Lưu bài</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Báo: Post view modal -->
+  <div class="modal-overlay" id="baoViewModal" role="dialog" aria-modal="true" aria-labelledby="baoViewTitle" hidden>
+    <div class="modal bao-modal bao-view-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="baoViewTitle">Bài báo</h2>
+        <button type="button" class="modal-close" id="baoViewClose" aria-label="Đóng">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="baoViewMeta" class="bao-view-meta"></div>
+        <div id="baoViewBody" class="bao-view-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="baoViewFooterClose" onclick="closeBaoView()">Đóng</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Back to top button -->
   <button class="back-to-top" id="backToTop" aria-label="Về đầu trang" hidden>
