@@ -467,7 +467,7 @@ header {
   inset: 0;
   background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px);
-  z-index: 1000;
+  z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1478,6 +1478,14 @@ main {
   padding: 4px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-tab {
@@ -1496,6 +1504,7 @@ main {
   transition: all var(--transition);
   white-space: nowrap;
   position: relative;
+  flex-shrink: 0;
 }
 
 .nav-tab:hover {

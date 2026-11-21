@@ -1341,6 +1341,8 @@ function deleteClass(classId) {
         currentClassId = remainingIds[0];
         loadSingleClass(currentClassId);
       } else {
+        // Last class deleted — cancel any active listener on the removed node
+        if (currentClassListener) { currentClassListener(); currentClassListener = null; }
         currentClassId = null;
         currentClassData = getDefaultClassData();
         localStorage.removeItem("selectedClassId");
