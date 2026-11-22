@@ -798,6 +798,9 @@ function cleanupAppData() {
   if (classesListListener) { classesListListener(); classesListListener = null; }
   if (chatListener) { chatListener(); chatListener = null; }
   if (postsListener) { postsListener(); postsListener = null; }
+
+  if (guestsListener) { guestsListener(); guestsListener = null; }
+  
   classesData = {};
   currentClassId = null;
   currentClassData = getDefaultClassData();
@@ -950,6 +953,7 @@ onAuthStateChanged(auth, async (user) => {
           const logoutBtn = document.getElementById("logoutBtn");
           if (logoutBtn) { logoutBtn.textContent = "Đăng xuất"; logoutBtn.classList.remove("hidden"); logoutBtn.onclick = logoutGuest; }
           loadClassesFromFirebase();
+          
           renderAll();
           if (pendingHashTab) { const t = pendingHashTab; pendingHashTab = null; switchTab(t); } else if (currentTab === 'about') { switchTab('home'); }
         } else {
@@ -1034,6 +1038,7 @@ onAuthStateChanged(auth, async (user) => {
         
         renderClassSelector();
         loadClassesFromFirebase();
+        loadGuestsList()
         // Flush pending hash tab now that admin is authenticated; default to home
         if (pendingHashTab) { const t = pendingHashTab; pendingHashTab = null; switchTab(t); } else if (currentTab === 'about') { switchTab('home'); }
       } else {
@@ -3454,5 +3459,68 @@ document.addEventListener('DOMContentLoaded', () => {
   const publicTabs = ['about', 'request'];
   if (pendingHashTab && publicTabs.includes(pendingHashTab) && pendingHashTab !== currentTab) {
     switchTab(pendingHashTab);
+  }
+});
+
+let guestsListener = null;
+
+function loadGuestsList() {
+  if (!isAdmin || guestsListener) return;
+  guestsListener = onValue(guestsRef, (snapshot) => {
+    const listEl = document.getElementById("guestAllowedList");
+    if (!listEl) return;
+    const val = snapshot.val();
+    listEl.innerHTML = "";
+    if (!val) {
+      listEl.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Chưa có khách nào được cấp phép.</p>';
+      return;
+    }
+    Object.keys(val).sort().forEach((name) => {
+      const item = document.createElement("div");
+      item.className = "student-drag-item";
+      item.style.cursor = "default";
+      item.innerHTML = `
+        <span class="student-drag-name">${escapeHtml(name)}</span>
+        <button type="button" class="tag-remove" aria-label="Xóa ${escapeHtml(name)}">×</button>
+      `;
+      item.querySelector("button").onclick = () => {
+        remove(ref(db, `trucNhatLop/guests/${name}`))
+          .then(() => showToast(`Đã xóa khách "${name}"`, "success"))
+          .catch(() => showToast("Không thể xóa khách!", "error"));
+      };
+      listEl.appendChild(item);
+    });
+  });
+}
+
+function addAllowedGuest() {
+  if (!isAdmin) return;
+  const input = document.getElementById("newGuestNameInput");
+  if (!input) return;
+  const name = input.value.trim().toLowerCase();
+  if (!name) {
+    showToast("Vui lòng nhập tên khách!", "warning");
+    return;
+  }
+  if (/[.#$\[\]\/]/.test(name)) {
+    showToast("Tên không được chứa ký tự . # $ [ ] /", "warning");
+    return;
+  }
+  set(ref(db, `trucNhatLop/guests/${name}`), true)
+    .then(() => {
+      input.value = "";
+      showToast(`Đã cấp quyền cho "${name}"`, "success");
+    })
+    .catch(() => showToast("Không thể thêm khách!", "error"));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const addBtn = document.getElementById("addGuestBtn");
+  const guestInput = document.getElementById("newGuestNameInput");
+  if (addBtn) addBtn.addEventListener("click", addAllowedGuest);
+  if (guestInput) {
+    guestInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); addAllowedGuest(); }
+    });
   }
 });
