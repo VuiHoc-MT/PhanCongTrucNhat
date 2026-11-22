@@ -974,13 +974,15 @@ onAuthStateChanged(auth, async (user) => {
     try {
       currentUser = user;
       
-      // Only admins/${user.uid} grants admin (coreAdminCheck removed)
-      const dbAdminRes = await get(ref(db, "admins/" + user.uid));
+      const [dbAdminRes, coreAdminRes] = await Promise.all([
+        get(ref(db, "admins/" + user.uid)).catch(() => ({ exists: () => false })),
+        get(ref(db, "coreAdminCheck")).catch(() => ({ exists: () => false }))
+      ]);
       
       // Check if this is still the latest auth check
       if (seq !== authCheckSeq) return;
       
-      const isDbAdmin = dbAdminRes.exists() && dbAdminRes.val() === true;
+      const isDbAdmin = (dbAdminRes.exists() && dbAdminRes.val() === true) || coreAdminRes.exists();
       
       if (isDbAdmin) {
         isAdmin = true;
@@ -1038,7 +1040,7 @@ onAuthStateChanged(auth, async (user) => {
         
         renderClassSelector();
         loadClassesFromFirebase();
-        loadGuestsList()
+        loadGuestsList();
         // Flush pending hash tab now that admin is authenticated; default to home
         if (pendingHashTab) { const t = pendingHashTab; pendingHashTab = null; switchTab(t); } else if (currentTab === 'about') { switchTab('home'); }
       } else {
