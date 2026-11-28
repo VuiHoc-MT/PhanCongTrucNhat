@@ -253,29 +253,32 @@
           <p class="page-subtitle">Thêm, sửa, xóa quyền truy cập của khách qua Email hoặc Tên &amp; Mật khẩu.</p>
         </div>
       </div>
-      <div class="grid gap-6" style="max-width: 780px; margin: 0 auto;">
-        <div class="card p-6">
-          <h2 class="text-lg font-bold mb-2">Cấp quyền qua Email (Google)</h2>
-          <p class="text-sm text-slate-500 mb-3">Khách đăng nhập bằng nút Google Email, không cần mật khẩu.</p>
-          <div class="flex gap-2">
-            <input type="email" id="newGuestEmailInput" class="form-input" placeholder="Nhập email khách (VD: hocsinh@gmail.com)..." maxlength="100" />
-            <button type="button" id="addGuestEmailBtn" class="btn btn-primary">Thêm Email</button>
+      <div class="card p-6" style="max-width: 980px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 24px;">
+        <div class="grid gap-6" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+          <!-- Bảng 1: Email -->
+          <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc;">
+            <h2 class="text-lg font-bold mb-2">1. Khách Email (Google)</h2>
+            <p class="text-sm text-slate-500 mb-3">Nhập 1 hoặc nhiều email (mỗi dòng 1 email, hoặc cách nhau bởi dấu phẩy).</p>
+            <textarea id="newGuestEmailInput" rows="4" class="textarea-styled mb-3" placeholder="hocsinh1@gmail.com&#10;hocsinh2@gmail.com"></textarea>
+            <button type="button" id="addGuestEmailBtn" class="btn btn-primary w-full mb-4">Thêm danh sách Email</button>
+            <h3 class="text-sm font-semibold text-slate-700 mb-2">Danh sách Email được cấp phép</h3>
+            <div id="guestEmailList" class="student-drag-list" role="list"></div>
           </div>
-        </div>
-        <div class="card p-6">
-          <h2 class="text-lg font-bold mb-2">Tạo tài khoản Tên &amp; Mật khẩu</h2>
-          <p class="text-sm text-slate-500 mb-3">Đăng nhập bằng tên bắt buộc phải có mật khẩu (tối thiểu 4 ký tự).</p>
-          <div class="flex flex-col gap-2">
-            <input type="text" id="newGuestNameInput" class="form-input" placeholder="Tên đăng nhập..." maxlength="50" />
-            <div class="flex gap-2">
-              <input type="password" id="newGuestPasswordInput" class="form-input" placeholder="Mật khẩu..." maxlength="50" />
-              <button type="button" id="addGuestBtn" class="btn btn-secondary">Thêm Tài khoản</button>
+
+          <!-- Bảng 2: Tên & Mật khẩu -->
+          <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc;">
+            <h2 class="text-lg font-bold mb-2">2. Khách Tên &amp; Mật khẩu</h2>
+            <p class="text-sm text-slate-500 mb-3">Đăng nhập bằng tên bắt buộc phải có mật khẩu (tối thiểu 4 ký tự).</p>
+            <div class="flex flex-col gap-2 mb-4">
+              <input type="text" id="newGuestNameInput" class="form-input" placeholder="Tên đăng nhập..." maxlength="50" />
+              <div class="flex gap-2">
+                <input type="password" id="newGuestPasswordInput" class="form-input" placeholder="Mật khẩu..." maxlength="50" />
+                <button type="button" id="addGuestBtn" class="btn btn-secondary">Thêm</button>
+              </div>
             </div>
+            <h3 class="text-sm font-semibold text-slate-700 mb-2">Danh sách Tài khoản Tên</h3>
+            <div id="guestPasswordList" class="student-drag-list" role="list"></div>
           </div>
-        </div>
-        <div class="card p-6">
-          <h2 class="text-lg font-bold mb-3">Danh sách khách được cấp phép</h2>
-          <div id="guestAllowedList" class="student-drag-list" role="list"></div>
         </div>
       </div>
     </section>

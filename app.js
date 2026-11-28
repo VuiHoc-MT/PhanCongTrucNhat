@@ -15,8 +15,9 @@ import { toArray, normalizeSchedule, showToast, escapeHtml } from './js/utils.js
 import { updateClassFields, saveCellToCloud } from './js/firebase-save.js';
 import {
   showLoginPage, hideLoginPage, guestLogin, cleanupAppData,
-  registerActiveGuest, logoutGuest, loadGuestsList, addAllowedGuest
+  registerActiveGuest, logoutGuest
 } from './js/auth.js';
+import { loadGuestsList, addAllowedGuestEmail, addAllowedGuest } from './js/guests.js';
 import {
   renderAll, updateStudentDragList, showTapNotifyBar, hideTapNotifyBar,
   collapseAdminPanelForMobile, clearTapSelection, updateStudentCount,
